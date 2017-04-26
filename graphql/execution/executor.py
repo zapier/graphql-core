@@ -129,10 +129,11 @@ def execute_fields_serially(exe_context, parent_type, source_value, fields):
 def execute_fields(exe_context, parent_type, source_value, fields):
     contains_promise = False
 
-    final_results = OrderedDict()
+    final_results = dict()
 
     for response_name, field_asts in fields.items():
-        result = resolve_field(exe_context, parent_type, source_value, field_asts)
+        result = resolve_field(exe_context, parent_type,
+                               source_value, field_asts)
         if result is Undefined:
             continue
 
@@ -184,7 +185,8 @@ def resolve_field(exe_context, parent_type, source, field_asts):
     )
 
     executor = exe_context.executor
-    result = resolve_or_error(resolve_fn_middleware, source, args, context, info, executor)
+    result = resolve_or_error(resolve_fn_middleware,
+                              source, args, context, info, executor)
 
     return complete_value_catching_error(
         exe_context,
@@ -215,7 +217,8 @@ def complete_value_catching_error(exe_context, return_type, field_asts, info, re
     # Otherwise, error protection is applied, logging the error and
     # resolving a null value for this field if one is encountered.
     try:
-        completed = complete_value(exe_context, return_type, field_asts, info, result)
+        completed = complete_value(
+            exe_context, return_type, field_asts, info, result)
         if is_thenable(completed):
             def handle_error(error):
                 exe_context.errors.append(error)
@@ -248,7 +251,8 @@ def complete_value(exe_context, return_type, field_asts, info, result):
     Otherwise, the field type expects a sub-selection set, and will complete the value by evaluating all
     sub-selections.
     """
-    # If field type is NonNull, complete for inner type, and throw field error if result is null.
+    # If field type is NonNull, complete for inner type, and throw field error
+    # if result is null.
 
     if is_thenable(result):
         return Promise.resolve(result).then(
@@ -259,7 +263,8 @@ def complete_value(exe_context, return_type, field_asts, info, result):
                 info,
                 resolved
             ),
-            lambda error: Promise.rejected(GraphQLLocatedError(field_asts, original_error=error))
+            lambda error: Promise.rejected(
+                GraphQLLocatedError(field_asts, original_error=error))
         )
 
     # print return_type, type(result)
@@ -277,7 +282,8 @@ def complete_value(exe_context, return_type, field_asts, info, result):
     if isinstance(return_type, GraphQLList):
         return complete_list_value(exe_context, return_type, field_asts, info, result)
 
-    # If field type is Scalar or Enum, serialize to a valid value, returning null if coercion is not possible.
+    # If field type is Scalar or Enum, serialize to a valid value, returning
+    # null if coercion is not possible.
     if isinstance(return_type, (GraphQLScalarType, GraphQLEnumType)):
         return complete_leaf_value(return_type, result)
 
@@ -287,7 +293,8 @@ def complete_value(exe_context, return_type, field_asts, info, result):
     if isinstance(return_type, GraphQLObjectType):
         return complete_object_value(exe_context, return_type, field_asts, info, result)
 
-    assert False, u'Cannot complete value of unexpected type "{}".'.format(return_type)
+    assert False, u'Cannot complete value of unexpected type "{}".'.format(
+        return_type)
 
 
 def complete_list_value(exe_context, return_type, field_asts, info, result):
@@ -302,7 +309,8 @@ def complete_list_value(exe_context, return_type, field_asts, info, result):
     completed_results = []
     contains_promise = False
     for item in result:
-        completed_item = complete_value_catching_error(exe_context, item_type, field_asts, info, item)
+        completed_item = complete_value_catching_error(
+            exe_context, item_type, field_asts, info, item)
         if not contains_promise and is_thenable(completed_item):
             contains_promise = True
 
@@ -331,9 +339,11 @@ def complete_abstract_value(exe_context, return_type, field_asts, info, result):
     # Field type must be Object, Interface or Union and expect sub-selections.
     if isinstance(return_type, (GraphQLInterfaceType, GraphQLUnionType)):
         if return_type.resolve_type:
-            runtime_type = return_type.resolve_type(result, exe_context.context_value, info)
+            runtime_type = return_type.resolve_type(
+                result, exe_context.context_value, info)
         else:
-            runtime_type = get_default_resolve_type_fn(result, exe_context.context_value, info, return_type)
+            runtime_type = get_default_resolve_type_fn(
+                result, exe_context.context_value, info, return_type)
 
     if isinstance(runtime_type, string_types):
         runtime_type = info.schema.get_type(runtime_type)
@@ -347,13 +357,14 @@ def complete_abstract_value(exe_context, return_type, field_asts, info, result):
                  info.field_name,
                  result,
                  runtime_type,
-                 ),
+            ),
             field_asts
         )
 
     if not exe_context.schema.is_possible_type(return_type, runtime_type):
         raise GraphQLError(
-            u'Runtime Object type "{}" is not a possible type for "{}".'.format(runtime_type, return_type),
+            u'Runtime Object type "{}" is not a possible type for "{}".'.format(
+                runtime_type, return_type),
             field_asts
         )
 
@@ -373,7 +384,8 @@ def complete_object_value(exe_context, return_type, field_asts, info, result):
     """
     if return_type.is_type_of and not return_type.is_type_of(result, exe_context.context_value, info):
         raise GraphQLError(
-            u'Expected value of type "{}" but got: {}.'.format(return_type, type(result).__name__),
+            u'Expected value of type "{}" but got: {}.'.format(
+                return_type, type(result).__name__),
             field_asts
         )
 
@@ -391,7 +403,8 @@ def complete_nonnull_value(exe_context, return_type, field_asts, info, result):
     )
     if completed is None:
         raise GraphQLError(
-            'Cannot return null for non-nullable field {}.{}.'.format(info.parent_type, info.field_name),
+            'Cannot return null for non-nullable field {}.{}.'.format(
+                info.parent_type, info.field_name),
             field_asts
         )
 
