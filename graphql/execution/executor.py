@@ -110,12 +110,14 @@ def execute_fields_serially(exe_context, parent_type, source_value, fields):
         if result is Undefined:
             return results
 
-        if is_thenable(result):
+        try:
             def collect_result(resolved_result):
                 results[response_name] = resolved_result
                 return results
 
             return result.then(collect_result, None)
+        except AttributeError:
+            pass # Ask forgiveness instead of permission
 
         results[response_name] = result
         return results
@@ -216,12 +218,14 @@ def complete_value_catching_error(exe_context, return_type, field_asts, info, re
     # resolving a null value for this field if one is encountered.
     try:
         completed = complete_value(exe_context, return_type, field_asts, info, result)
-        if is_thenable(completed):
+        try:
             def handle_error(error):
                 exe_context.errors.append(error)
                 return None
 
             return completed.catch(handle_error)
+        except AttributeError:
+            pass # Better to ask forgiveness than permission
 
         return completed
     except Exception as e:

@@ -175,12 +175,14 @@ class Fragment(object):
             if result is Undefined:
                 return results
 
-            if is_thenable(result):
+            try:
                 def collect_result(resolved_result):
                     results[response_name] = resolved_result
                     return results
 
                 return result.then(collect_result)
+            except AttributeError:
+                pass # Ask forgiveness instead of permission
 
             results[response_name] = result
             return results
