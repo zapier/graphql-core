@@ -2,8 +2,6 @@ from __future__ import absolute_import
 
 from asyncio import Future, get_event_loop, iscoroutine, wait
 
-from promise import Promise
-
 try:
     from asyncio import ensure_future
 except ImportError:
@@ -47,5 +45,5 @@ class AsyncioExecutor(object):
     def execute(self, fn, *args, **kwargs):
         result = fn(*args, **kwargs)
         if iscoroutine(result):
-            return self.loop.run_until_complete(result)
+            return get_event_loop().run_until_complete(result)
         return result
