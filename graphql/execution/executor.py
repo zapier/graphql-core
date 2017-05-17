@@ -137,8 +137,6 @@ def execute_fields(exe_context, parent_type, source_value, fields):
 
 
 def resolve_field(exe_context, parent_type, source, field_asts):
-    import pdb
-    pdb.set_trace()
     field_ast = field_asts[0]
     field_name = field_ast.name.value
 
@@ -383,7 +381,10 @@ def complete_object_value(exe_context, return_type, field_asts, info, result):
 
     # Collect sub-fields to execute to complete this value.
     subfield_asts = exe_context.get_sub_fields(return_type, field_asts)
-    return execute_fields(exe_context, return_type, result, subfield_asts)
+    import pdb
+    pdb.set_trace()
+    r =  execute_fields(exe_context, return_type, result, subfield_asts)
+    return r
 
 
 def complete_nonnull_value(exe_context, return_type, field_asts, info, result):
