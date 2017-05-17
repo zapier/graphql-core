@@ -14,7 +14,7 @@ from ..type import (GraphQLEnumType, GraphQLInterfaceType, GraphQLList,
 from .base import (ExecutionContext, ExecutionResult, ResolveInfo, Undefined,
                    collect_fields, default_resolve_fn, get_field_def,
                    get_operation_root_type)
-from .executors.asyncio import AsyncioExecutor as SyncExecutor
+from .executors.sync import SyncExecutor
 from .middleware import MiddlewareManager
 
 logger = logging.getLogger(__name__)

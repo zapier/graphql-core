@@ -43,7 +43,5 @@ class AsyncioExecutor(object):
             self.loop.run_until_complete(wait(futures))
 
     def execute(self, fn, *args, **kwargs):
-        result = fn(*args, **kwargs)
-        if iscoroutine(result):
-            return get_event_loop().run_until_complete(result)
-        return result
+        return fn(*args, **kwargs)
+
