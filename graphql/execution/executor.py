@@ -62,9 +62,7 @@ def execute(schema, document_ast, root_value=None, context_value=None,
         return ExecutionResult(data=data, errors=context.errors)
 
     try:
-        import pdb
-        pdb.set_trace()
-        return on_resolve(executor.execute((execute_operation(context, context.operation, root_value))))
+        return on_resolve(executor.execute(execute_operation(context, context.operation, root_value)))
     except Exception as e:
         on_rejected(e)
 
@@ -139,6 +137,8 @@ def execute_fields(exe_context, parent_type, source_value, fields):
 
 
 def resolve_field(exe_context, parent_type, source, field_asts):
+    import pdb
+    pdb.set_trace()
     field_ast = field_asts[0]
     field_name = field_ast.name.value
 
