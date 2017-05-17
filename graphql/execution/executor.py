@@ -1,10 +1,9 @@
 import collections
-import functools
 import logging
 import sys
+from asyncio import iscoroutine, get_event_loop, gather
 
 from six import string_types
-from promise import Promise, promise_for_dict, is_thenable
 
 from ..error import GraphQLError, GraphQLLocatedError
 from ..pyutils.default_ordered_dict import DefaultOrderedDict
@@ -15,25 +14,15 @@ from ..type import (GraphQLEnumType, GraphQLInterfaceType, GraphQLList,
 from .base import (ExecutionContext, ExecutionResult, ResolveInfo, Undefined,
                    collect_fields, default_resolve_fn, get_field_def,
                    get_operation_root_type)
-from .executors.sync import SyncExecutor
-from .experimental.executor import execute as experimental_execute
+from .executors.asyncio import AsyncioExecutor as SyncExecutor
 from .middleware import MiddlewareManager
 
 logger = logging.getLogger(__name__)
 
 
-use_experimental_executor = False
-
-
 def execute(schema, document_ast, root_value=None, context_value=None,
             variable_values=None, operation_name=None, executor=None,
             return_promise=False, middleware=None):
-    if use_experimental_executor:
-        return experimental_execute(
-            schema, document_ast, root_value, context_value,
-            variable_values, operation_name, executor,
-            return_promise, middleware
-        )
 
     assert schema, 'Must provide schema'
     assert isinstance(schema, GraphQLSchema), (
@@ -63,9 +52,6 @@ def execute(schema, document_ast, root_value=None, context_value=None,
         middleware
     )
 
-    def executor(resolve, reject):
-        return resolve(execute_operation(context, context.operation, root_value))
-
     def on_rejected(error):
         context.errors.append(error)
         return None
@@ -75,11 +61,10 @@ def execute(schema, document_ast, root_value=None, context_value=None,
             return ExecutionResult(data=data)
         return ExecutionResult(data=data, errors=context.errors)
 
-    promise = Promise(executor).catch(on_rejected).then(on_resolve)
-    if return_promise:
-        return promise
-    context.executor.wait_until_finished()
-    return promise.get()
+    try:
+        return on_resolve(executor.execute((execute_operation(context, context.operation, root_value))))
+    except Exception as e:
+        on_rejected(e)
 
 
 def execute_operation(exe_context, operation, root_value):
@@ -110,42 +95,45 @@ def execute_fields_serially(exe_context, parent_type, source_value, fields):
         if result is Undefined:
             return results
 
-        try:
-            def collect_result(resolved_result):
-                results[response_name] = resolved_result
-                return results
-
-            return result.then(collect_result, None)
-        except AttributeError:
-            pass # Ask forgiveness instead of permission
-
         results[response_name] = result
         return results
 
-    def execute_field(prev_promise, response_name):
-        return prev_promise.then(lambda results: execute_field_callback(results, response_name))
+    results = collections.OrderedDict()
+    for f in fields.key():
+        execute_field_callback(results, f)
 
-    return functools.reduce(execute_field, fields.keys(), Promise.resolve(collections.OrderedDict()))
+    return results
 
 
 def execute_fields(exe_context, parent_type, source_value, fields):
-    contains_promise = False
-
     final_results = OrderedDict()
+    corroutz = []
+    corroutz_name = []
 
     for response_name, field_asts in fields.items():
         result = resolve_field(exe_context, parent_type, source_value, field_asts)
         if result is Undefined:
             continue
 
+        if iscoroutine(result):
+            corroutz.append(result)
+            corroutz_name.append(response_name)
+
         final_results[response_name] = result
-        if is_thenable(result):
-            contains_promise = True
 
-    if not contains_promise:
-        return final_results
 
-    return promise_for_dict(final_results)
+    results = get_event_loop().run_until_complete(
+        gather(*corroutz, return_exceptions=True)
+    )
+
+    for i, r in enumerate(results):
+        if isinstance(r, Exception):
+            raise r
+
+        final_results[corroutz_name[i]] = r
+
+
+    return final_results
 
 
 def resolve_field(exe_context, parent_type, source, field_asts):
@@ -253,18 +241,17 @@ def complete_value(exe_context, return_type, field_asts, info, result):
     sub-selections.
     """
     # If field type is NonNull, complete for inner type, and throw field error if result is null.
-
-    if is_thenable(result):
-        return Promise.resolve(result).then(
-            lambda resolved: complete_value(
-                exe_context,
-                return_type,
-                field_asts,
-                info,
-                resolved
-            ),
-            lambda error: Promise.rejected(GraphQLLocatedError(field_asts, original_error=error))
-        )
+    if iscoroutine(result):
+        try:
+            return complete_value(
+                    exe_context,
+                    return_type,
+                    field_asts,
+                    info,
+                    get_event_loop().run_until_complete(result)
+                )
+        except:
+            raise GraphQLLocatedError(field_asts)
 
     # print return_type, type(result)
     if isinstance(result, Exception):
@@ -304,15 +291,26 @@ def complete_list_value(exe_context, return_type, field_asts, info, result):
 
     item_type = return_type.of_type
     completed_results = []
-    contains_promise = False
+    corroutz = []
     for item in result:
         completed_item = complete_value_catching_error(exe_context, item_type, field_asts, info, item)
-        if not contains_promise and is_thenable(completed_item):
-            contains_promise = True
+        if iscoroutine(completed_item):
+            corroutz.append(completed_item)
+        else:
+            completed_results.append(completed_item)
 
-        completed_results.append(completed_item)
+    if corroutz:
+        results = get_event_loop().run_until_complete(
+            gather(*corroutz, return_exceptions=True)
+        )
 
-    return Promise.all(completed_results) if contains_promise else completed_results
+        for r in results:
+            if isinstance(r, Exception):
+                raise r
+
+            completed_results.append(r)
+
+    return completed_results
 
 
 def complete_leaf_value(return_type, result):

@@ -46,8 +46,6 @@ class AsyncioExecutor(object):
 
     def execute(self, fn, *args, **kwargs):
         result = fn(*args, **kwargs)
-        if isinstance(result, Future) or iscoroutine(result):
-            future = ensure_future(result, loop=self.loop)
-            self.futures.append(future)
-            return Promise.resolve(future)
+        if iscoroutine(result):
+            return self.loop.run_until_complete(result)
         return result

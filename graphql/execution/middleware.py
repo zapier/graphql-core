@@ -2,7 +2,6 @@ import inspect
 from functools import partial
 from itertools import chain
 
-from promise import Promise
 
 MIDDLEWARE_RESOLVER_FUNCTION = 'resolve'
 
@@ -54,4 +53,4 @@ def middleware_chain(func, middlewares, wrap_in_promise):
 
 
 def make_it_promise(next, *a, **b):
-    return Promise.resolve(next(*a, **b))
+    return next(*a, **b)
