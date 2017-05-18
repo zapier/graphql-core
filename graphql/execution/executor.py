@@ -136,7 +136,7 @@ async def execute_fields(exe_context, parent_type, source_value, fields):
     return final_results
 
 
-def resolve_field(exe_context, parent_type, source, field_asts):
+async def resolve_field(exe_context, parent_type, source, field_asts):
     field_ast = field_asts[0]
     field_name = field_ast.name.value
 
@@ -176,7 +176,7 @@ def resolve_field(exe_context, parent_type, source, field_asts):
     executor = exe_context.executor
     result = resolve_or_error(resolve_fn_middleware, source, args, context, info, executor)
 
-    return complete_value_catching_error(
+    return await complete_value_catching_error(
         exe_context,
         return_type,
         field_asts,
@@ -196,16 +196,16 @@ def resolve_or_error(resolve_fn, source, args, context, info, executor):
         return e
 
 
-def complete_value_catching_error(exe_context, return_type, field_asts, info, result):
+async def complete_value_catching_error(exe_context, return_type, field_asts, info, result):
     # If the field type is non-nullable, then it is resolved without any
     # protection from errors.
     if isinstance(return_type, GraphQLNonNull):
-        return complete_value(exe_context, return_type, field_asts, info, result)
+        return await complete_value(exe_context, return_type, field_asts, info, result)
 
     # Otherwise, error protection is applied, logging the error and
     # resolving a null value for this field if one is encountered.
     try:
-        completed = complete_value(exe_context, return_type, field_asts, info, result)
+        completed = await complete_value(exe_context, return_type, field_asts, info, result)
         try:
             def handle_error(error):
                 exe_context.errors.append(error)
@@ -243,7 +243,7 @@ async def complete_value(exe_context, return_type, field_asts, info, result):
     # If field type is NonNull, complete for inner type, and throw field error if result is null.
     if iscoroutine(result):
         try:
-            return complete_value(
+            return await complete_value(
                     exe_context,
                     return_type,
                     field_asts,
@@ -258,7 +258,7 @@ async def complete_value(exe_context, return_type, field_asts, info, result):
         raise GraphQLLocatedError(field_asts, original_error=result)
 
     if isinstance(return_type, GraphQLNonNull):
-        return complete_nonnull_value(exe_context, return_type, field_asts, info, result)
+        return await complete_nonnull_value(exe_context, return_type, field_asts, info, result)
 
     # If result is null-like, return null.
     if result is None:
@@ -266,7 +266,7 @@ async def complete_value(exe_context, return_type, field_asts, info, result):
 
     # If field type is List, complete each item in the list with the inner type
     if isinstance(return_type, GraphQLList):
-        return complete_list_value(exe_context, return_type, field_asts, info, result)
+        return await complete_list_value(exe_context, return_type, field_asts, info, result)
 
     # If field type is Scalar or Enum, serialize to a valid value, returning null if coercion is not possible.
     if isinstance(return_type, (GraphQLScalarType, GraphQLEnumType)):
@@ -293,7 +293,7 @@ async def complete_list_value(exe_context, return_type, field_asts, info, result
     completed_results = []
     corroutz = []
     for item in result:
-        completed_item = complete_value_catching_error(exe_context, item_type, field_asts, info, item)
+        completed_item = await complete_value_catching_error(exe_context, item_type, field_asts, info, item)
         if iscoroutine(completed_item):
             corroutz.append(completed_item)
         else:
@@ -383,11 +383,11 @@ async def complete_object_value(exe_context, return_type, field_asts, info, resu
     return r
 
 
-def complete_nonnull_value(exe_context, return_type, field_asts, info, result):
+async def complete_nonnull_value(exe_context, return_type, field_asts, info, result):
     """
     Complete a NonNull value by completing the inner type
     """
-    completed = complete_value(
+    completed = await complete_value(
         exe_context, return_type.of_type, field_asts, info, result
     )
     if completed is None:
