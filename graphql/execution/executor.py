@@ -122,9 +122,9 @@ def execute_fields(exe_context, parent_type, source_value, fields):
         final_results[response_name] = result
 
 
-    results = get_event_loop().run_until_complete(
+    results = asyncio.ensure_future(
         gather(*corroutz, return_exceptions=True)
-    )
+    ).result()
 
     for i, r in enumerate(results):
         if isinstance(r, Exception):
@@ -248,7 +248,7 @@ def complete_value(exe_context, return_type, field_asts, info, result):
                     return_type,
                     field_asts,
                     info,
-                    get_event_loop().run_until_complete(result)
+                    asyncio.ensure_future(result).result()
                 )
         except:
             raise GraphQLLocatedError(field_asts)
@@ -300,9 +300,9 @@ def complete_list_value(exe_context, return_type, field_asts, info, result):
             completed_results.append(completed_item)
 
     if corroutz:
-        results = get_event_loop().run_until_complete(
+        results = asyncio.ensure_future(
             gather(*corroutz, return_exceptions=True)
-        )
+        ).result()
 
         for r in results:
             if isinstance(r, Exception):
