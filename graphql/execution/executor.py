@@ -20,7 +20,7 @@ from .middleware import MiddlewareManager
 logger = logging.getLogger(__name__)
 
 
-def execute(schema, document_ast, root_value=None, context_value=None,
+async def execute(schema, document_ast, root_value=None, context_value=None,
             variable_values=None, operation_name=None, executor=None,
             return_promise=False, middleware=None):
 
@@ -62,12 +62,13 @@ def execute(schema, document_ast, root_value=None, context_value=None,
         return ExecutionResult(data=data, errors=context.errors)
 
     try:
-        return on_resolve(executor.execute(execute_operation(context, context.operation, root_value)))
+        # executor.execute
+        return on_resolve(await execute_operation(context, context.operation, root_value))
     except Exception as e:
         on_rejected(e)
 
 
-def execute_operation(exe_context, operation, root_value):
+async def execute_operation(exe_context, operation, root_value):
     type = get_operation_root_type(exe_context.schema, operation)
     fields = collect_fields(
         exe_context,
@@ -80,7 +81,7 @@ def execute_operation(exe_context, operation, root_value):
     if operation.operation == 'mutation':
         return execute_fields_serially(exe_context, type, root_value, fields)
 
-    return execute_fields(exe_context, type, root_value, fields)
+    return await execute_fields(exe_context, type, root_value, fields)
 
 
 def execute_fields_serially(exe_context, parent_type, source_value, fields):
@@ -270,10 +271,10 @@ async def complete_value(exe_context, return_type, field_asts, info, result):
         return complete_leaf_value(return_type, result)
 
     if isinstance(return_type, (GraphQLInterfaceType, GraphQLUnionType)):
-        return complete_abstract_value(exe_context, return_type, field_asts, info, result)
+        return await complete_abstract_value(exe_context, return_type, field_asts, info, result)
 
     if isinstance(return_type, GraphQLObjectType):
-        return complete_object_value(exe_context, return_type, field_asts, info, result)
+        return await complete_object_value(exe_context, return_type, field_asts, info, result)
 
     assert False, u'Cannot complete value of unexpected type "{}".'.format(return_type)
 
@@ -318,7 +319,7 @@ def complete_leaf_value(return_type, result):
     return return_type.serialize(result)
 
 
-def complete_abstract_value(exe_context, return_type, field_asts, info, result):
+async def complete_abstract_value(exe_context, return_type, field_asts, info, result):
     """
     Complete an value of an abstract type by determining the runtime type of that value, then completing based
     on that type.
@@ -354,7 +355,7 @@ def complete_abstract_value(exe_context, return_type, field_asts, info, result):
             field_asts
         )
 
-    return complete_object_value(exe_context, runtime_type, field_asts, info, result)
+    return await complete_object_value(exe_context, runtime_type, field_asts, info, result)
 
 
 def get_default_resolve_type_fn(value, context, info, abstract_type):
@@ -364,7 +365,7 @@ def get_default_resolve_type_fn(value, context, info, abstract_type):
             return type
 
 
-def complete_object_value(exe_context, return_type, field_asts, info, result):
+async def complete_object_value(exe_context, return_type, field_asts, info, result):
     """
     Complete an Object value by evaluating all sub-selections.
     """
@@ -376,9 +377,7 @@ def complete_object_value(exe_context, return_type, field_asts, info, result):
 
     # Collect sub-fields to execute to complete this value.
     subfield_asts = exe_context.get_sub_fields(return_type, field_asts)
-    import pdb
-    pdb.set_trace()
-    r =  execute_fields(exe_context, return_type, result, subfield_asts)
+    r = await execute_fields(exe_context, return_type, result, subfield_asts)
     return r
 
 
