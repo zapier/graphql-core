@@ -239,16 +239,7 @@ async def complete_value(exe_context, return_type, field_asts, info, result):
     """
     # If field type is NonNull, complete for inner type, and throw field error if result is null.
     if iscoroutine(result):
-        try:
-            return await complete_value(
-                    exe_context,
-                    return_type,
-                    field_asts,
-                    info,
-                    await result
-                )
-        except:
-            raise GraphQLLocatedError(field_asts)
+        result = await result
 
     # print return_type, type(result)
     if isinstance(result, Exception):
