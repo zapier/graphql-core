@@ -1,6 +1,7 @@
 import inspect
 from functools import partial
 from itertools import chain
+import asyncio
 
 
 MIDDLEWARE_RESOLVER_FUNCTION = 'resolve'
