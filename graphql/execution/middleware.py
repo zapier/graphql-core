@@ -53,4 +53,7 @@ def middleware_chain(func, middlewares, wrap_in_promise):
 
 
 def make_it_promise(next, *a, **b):
-    return next(*a, **b)
+    k = next(*a, **b)
+    if asyncio.iscoroutine(k):
+        return asyncio.ensure_future(k).result()
+    return k
