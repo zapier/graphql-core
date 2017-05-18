@@ -63,9 +63,11 @@ async def execute(schema, document_ast, root_value=None, context_value=None,
 
     try:
         # executor.execute
+        import pdb
+        pdb.set_trace()
         return on_resolve(await execute_operation(context, context.operation, root_value))
     except Exception as e:
-        on_rejected(e)
+        return on_rejected(e)
 
 
 async def execute_operation(exe_context, operation, root_value):
