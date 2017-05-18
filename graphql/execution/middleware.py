@@ -39,7 +39,7 @@ def get_middleware_resolvers(middlewares):
         yield getattr(middleware, MIDDLEWARE_RESOLVER_FUNCTION)
 
 
-def middleware_chain(func, middlewares, _):
+def middleware_chain(func, middlewares, wrap_in_promise=False):
     if not middlewares:
         return func
 
