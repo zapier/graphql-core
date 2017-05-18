@@ -105,7 +105,7 @@ def execute_fields_serially(exe_context, parent_type, source_value, fields):
     return results
 
 
-def execute_fields(exe_context, parent_type, source_value, fields):
+async def execute_fields(exe_context, parent_type, source_value, fields):
     final_results = OrderedDict()
     corroutz = []
     corroutz_name = []
@@ -121,10 +121,7 @@ def execute_fields(exe_context, parent_type, source_value, fields):
 
         final_results[response_name] = result
 
-
-    results = asyncio.ensure_future(
-        gather(*corroutz, return_exceptions=True)
-    ).result()
+    results = await gather(*corroutz, return_exceptions=True)
 
     for i, r in enumerate(results):
         if isinstance(r, Exception):
@@ -221,7 +218,7 @@ def complete_value_catching_error(exe_context, return_type, field_asts, info, re
         return None
 
 
-def complete_value(exe_context, return_type, field_asts, info, result):
+async def complete_value(exe_context, return_type, field_asts, info, result):
     """
     Implements the instructions for completeValue as defined in the
     "Field entries" section of the spec.
@@ -248,7 +245,7 @@ def complete_value(exe_context, return_type, field_asts, info, result):
                     return_type,
                     field_asts,
                     info,
-                    asyncio.ensure_future(result).result()
+                    await result
                 )
         except:
             raise GraphQLLocatedError(field_asts)
@@ -281,7 +278,7 @@ def complete_value(exe_context, return_type, field_asts, info, result):
     assert False, u'Cannot complete value of unexpected type "{}".'.format(return_type)
 
 
-def complete_list_value(exe_context, return_type, field_asts, info, result):
+async def complete_list_value(exe_context, return_type, field_asts, info, result):
     """
     Complete a list value by completing each item in the list with the inner type
     """
@@ -300,9 +297,7 @@ def complete_list_value(exe_context, return_type, field_asts, info, result):
             completed_results.append(completed_item)
 
     if corroutz:
-        results = asyncio.ensure_future(
-            gather(*corroutz, return_exceptions=True)
-        ).result()
+        results = await gather(*corroutz, return_exceptions=True)
 
         for r in results:
             if isinstance(r, Exception):

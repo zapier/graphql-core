@@ -20,7 +20,7 @@ class MiddlewareManager(object):
             self._cached_resolvers[field_resolver] = middleware_chain(
                 field_resolver,
                 self._middleware_resolvers,
-                wrap_in_promise=self.wrap_in_promise,
+                wrap_in_promise=False,
             )
 
         return self._cached_resolvers[field_resolver]
@@ -39,22 +39,14 @@ def get_middleware_resolvers(middlewares):
         yield getattr(middleware, MIDDLEWARE_RESOLVER_FUNCTION)
 
 
-def middleware_chain(func, middlewares, wrap_in_promise):
+def middleware_chain(func, middlewares, _):
     if not middlewares:
         return func
-    if wrap_in_promise:
-        middlewares = chain((func, make_it_promise), middlewares)
-    else:
-        middlewares = chain((func,), middlewares)
+
+    middlewares = chain((func,), middlewares)
     last_func = None
     for middleware in middlewares:
         last_func = partial(middleware, last_func) if last_func else middleware
 
     return last_func
 
-
-def make_it_promise(next, *a, **b):
-    k = next(*a, **b)
-    if asyncio.iscoroutine(k):
-        return asyncio.ensure_future(k).result()
-    return k
