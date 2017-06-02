@@ -281,11 +281,8 @@ async def complete_list_value(exe_context, return_type, field_asts, info, result
     completed_results = []
     corroutz = []
     for item in result:
-        completed_item = await complete_value_catching_error(exe_context, item_type, field_asts, info, item)
-        if iscoroutine(completed_item):
-            corroutz.append(completed_item)
-        else:
-            completed_results.append(completed_item)
+        completed_item = complete_value_catching_error(exe_context, item_type, field_asts, info, item)
+        corroutz.append(completed_item)
 
     if corroutz:
         results = await gather(*corroutz, return_exceptions=True)
