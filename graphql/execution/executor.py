@@ -202,17 +202,7 @@ async def complete_value_catching_error(exe_context, return_type, field_asts, in
     # Otherwise, error protection is applied, logging the error and
     # resolving a null value for this field if one is encountered.
     try:
-        completed = await complete_value(exe_context, return_type, field_asts, info, result)
-        try:
-            def handle_error(error):
-                exe_context.errors.append(error)
-                return None
-
-            return completed.catch(handle_error)
-        except AttributeError:
-            pass # Better to ask forgiveness than permission
-
-        return completed
+        return await complete_value(exe_context, return_type, field_asts, info, result)
     except Exception as e:
         exe_context.errors.append(e)
         return None
