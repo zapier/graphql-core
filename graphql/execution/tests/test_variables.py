@@ -90,9 +90,9 @@ TestType = GraphQLObjectType('TestType', {
 schema = GraphQLSchema(TestType)
 
 
-def check(doc, expected, args=None):
+async def check(doc, expected, args=None):
     ast = parse(doc)
-    response = execute(schema, ast, variable_values=args)
+    response = await execute(schema, ast, variable_values=args)
 
     if response.errors:
         result = {
@@ -109,46 +109,46 @@ def check(doc, expected, args=None):
 
 # Handles objects and nullability
 
-def test_inline_executes_with_complex_input():
+async def test_inline_executes_with_complex_input():
     doc = '''
     {
       fieldWithObjectInput(input: {a: "foo", b: ["bar"], c: "baz"})
     }
     '''
-    check(doc, {
+    await check(doc, {
         'data': {"fieldWithObjectInput": stringify({"a": "foo", "b": ["bar"], "c": "baz"})}
     })
 
 
-def test_properly_parses_single_value_to_list():
+async def test_properly_parses_single_value_to_list():
     doc = '''
     {
         fieldWithObjectInput(input: {a: "foo", b: "bar", c: "baz"})
     }
     '''
-    check(doc, {
+    await check(doc, {
         'data': {'fieldWithObjectInput': stringify({"a": "foo", "b": ["bar"], "c": "baz"})}
     })
 
 
-def test_does_not_use_incorrect_value():
+async def test_does_not_use_incorrect_value():
     doc = '''
     {
         fieldWithObjectInput(input: ["foo", "bar", "baz"])
     }
     '''
-    check(doc, {
+    await check(doc, {
         'data': {'fieldWithObjectInput': None}
     })
 
 
-def test_properly_runs_parse_literal_on_complex_scalar_types():
+async def test_properly_runs_parse_literal_on_complex_scalar_types():
     doc = '''
     {
         fieldWithObjectInput(input: {a: "foo", d: "SerializedValue"})
     }
     '''
-    check(doc, {
+    await check(doc, {
         'data': {
             'fieldWithObjectInput': '{"a": "foo", "d": "DeserializedValue"}',
         }
@@ -163,40 +163,40 @@ class TestUsingVariables:
     }
     '''
 
-    def test_executes_with_complex_input(self):
+    async def test_executes_with_complex_input(self):
         params = {'input': {'a': 'foo', 'b': ['bar'], 'c': 'baz'}}
-        check(self.doc, {
+        await check(self.doc, {
             'data': {'fieldWithObjectInput': stringify({"a": "foo", "b": ["bar"], "c": "baz"})}
         }, params)
 
-    def test_uses_default_value_when_not_provided(self):
+    async def test_uses_default_value_when_not_provided(self):
         with_defaults_doc = '''
         query q($input: TestInputObject = {a: "foo", b: ["bar"], c: "baz"}) {
             fieldWithObjectInput(input: $input)
         }
         '''
 
-        check(with_defaults_doc, {
+        await check(with_defaults_doc, {
             'data': {'fieldWithObjectInput': stringify({"a": "foo", "b": ["bar"], "c": "baz"})}
         })
 
-    def test_properly_parses_single_value_to_list(self):
+    async def test_properly_parses_single_value_to_list(self):
         params = {'input': {'a': 'foo', 'b': 'bar', 'c': 'baz'}}
-        check(self.doc, {
+        await check(self.doc, {
             'data': {'fieldWithObjectInput': stringify({"a": "foo", "b": ["bar"], "c": "baz"})}
         }, params)
 
-    def test_executes_with_complex_scalar_input(self):
+    async def test_executes_with_complex_scalar_input(self):
         params = {'input': {'c': 'foo', 'd': 'SerializedValue'}}
-        check(self.doc, {
+        await check(self.doc, {
             'data': {'fieldWithObjectInput': stringify({"c": "foo", "d": "DeserializedValue"})}
         }, params)
 
-    def test_errors_on_null_for_nested_non_null(self):
+    async def test_errors_on_null_for_nested_non_null(self):
         params = {'input': {'a': 'foo', 'b': 'bar', 'c': None}}
 
         with raises(GraphQLError) as excinfo:
-            check(self.doc, {}, params)
+            await check(self.doc, {}, params)
 
         assert format_error(excinfo.value) == {
             'locations': [{'column': 13, 'line': 2}],
@@ -204,11 +204,11 @@ class TestUsingVariables:
                        'In field "c": Expected "String!", found null.'.format(stringify(params['input']))
         }
 
-    def test_errors_on_incorrect_type(self):
+    async def test_errors_on_incorrect_type(self):
         params = {'input': 'foo bar'}
 
         with raises(GraphQLError) as excinfo:
-            check(self.doc, {}, params)
+            await check(self.doc, {}, params)
 
         assert format_error(excinfo.value) == {
             'locations': [{'column': 13, 'line': 2}],
@@ -216,11 +216,11 @@ class TestUsingVariables:
                        'Expected "TestInputObject", found not an object.'.format(stringify(params['input']))
         }
 
-    def test_errors_on_omission_of_nested_non_null(self):
+    async def test_errors_on_omission_of_nested_non_null(self):
         params = {'input': {'a': 'foo', 'b': 'bar'}}
 
         with raises(GraphQLError) as excinfo:
-            check(self.doc, {}, params)
+            await check(self.doc, {}, params)
 
         assert format_error(excinfo.value) == {
             'locations': [{'column': 13, 'line': 2}],
@@ -228,7 +228,7 @@ class TestUsingVariables:
                        'In field "c": Expected "String!", found null.'.format(stringify(params['input']))
         }
 
-    def test_errors_on_deep_nested_errors_and_with_many_errors(self):
+    async def test_errors_on_deep_nested_errors_and_with_many_errors(self):
         nested_doc = '''
           query q($input: TestNestedInputObject) {
             fieldWithNestedObjectInput(input: $input)
@@ -237,7 +237,7 @@ class TestUsingVariables:
 
         params = {'input': {'na': {'a': 'foo'}}}
         with raises(GraphQLError) as excinfo:
-            check(nested_doc, {}, params)
+            await check(nested_doc, {}, params)
 
         assert format_error(excinfo.value) == {
             'locations': [{'column': 19, 'line': 2}],
@@ -246,11 +246,11 @@ class TestUsingVariables:
                        'In field "nb": Expected "String!", found null.'.format(stringify(params['input']))
         }
 
-    def test_errors_on_addition_of_input_field_of_incorrect_type(self):
+    async def test_errors_on_addition_of_input_field_of_incorrect_type(self):
         params = {'input': {'a': 'foo', 'b': 'bar', 'c': 'baz', 'd': 'dog'}}
 
         with raises(GraphQLError) as excinfo:
-            check(self.doc, {}, params)
+            await check(self.doc, {}, params)
 
         assert format_error(excinfo.value) == {
             'locations': [{'column': 13, 'line': 2}],
@@ -258,11 +258,11 @@ class TestUsingVariables:
                        'In field "d": Expected type "ComplexScalar", found "dog".'.format(stringify(params['input']))
         }
 
-    def test_errors_on_addition_of_unknown_input_field(self):
+    async def test_errors_on_addition_of_unknown_input_field(self):
         params = {'input': {'a': 'foo', 'b': 'bar', 'c': 'baz', 'extra': 'dog'}}
 
         with raises(GraphQLError) as excinfo:
-            check(self.doc, {}, params)
+            await check(self.doc, {}, params)
 
         assert format_error(excinfo.value) == {
             'locations': [{'column': 13, 'line': 2}],
@@ -271,89 +271,89 @@ class TestUsingVariables:
         }
 
 
-def test_allows_nullable_inputs_to_be_omitted():
+async def test_allows_nullable_inputs_to_be_omitted():
     doc = '{ fieldWithNullableStringInput }'
-    check(doc, {'data': {
+    await check(doc, {'data': {
         'fieldWithNullableStringInput': None
     }})
 
 
-def test_allows_nullable_inputs_to_be_omitted_in_a_variable():
+async def test_allows_nullable_inputs_to_be_omitted_in_a_variable():
     doc = '''
     query SetsNullable($value: String) {
         fieldWithNullableStringInput(input: $value)
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'fieldWithNullableStringInput': None
         }
     })
 
 
-def test_allows_nullable_inputs_to_be_omitted_in_an_unlisted_variable():
+async def test_allows_nullable_inputs_to_be_omitted_in_an_unlisted_variable():
     doc = '''
     query SetsNullable {
         fieldWithNullableStringInput(input: $value)
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'fieldWithNullableStringInput': None
         }
     })
 
 
-def test_allows_nullable_inputs_to_be_set_to_null_in_a_variable():
+async def test_allows_nullable_inputs_to_be_set_to_null_in_a_variable():
     doc = '''
     query SetsNullable($value: String) {
         fieldWithNullableStringInput(input: $value)
     }
     '''
-    check(doc, {
+    await check(doc, {
         'data': {
             'fieldWithNullableStringInput': None
         }
     }, {'value': None})
 
 
-def test_allows_nullable_inputs_to_be_set_to_a_value_in_a_variable():
+async def test_allows_nullable_inputs_to_be_set_to_a_value_in_a_variable():
     doc = '''
     query SetsNullable($value: String) {
         fieldWithNullableStringInput(input: $value)
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'fieldWithNullableStringInput': '"a"'
         }
     }, {'value': 'a'})
 
 
-def test_allows_nullable_inputs_to_be_set_to_a_value_directly():
+async def test_allows_nullable_inputs_to_be_set_to_a_value_directly():
     doc = '''
     {
         fieldWithNullableStringInput(input: "a")
     }
     '''
-    check(doc, {
+    await check(doc, {
         'data': {
             'fieldWithNullableStringInput': '"a"'
         }
     })
 
 
-def test_does_not_allow_non_nullable_inputs_to_be_omitted_in_a_variable():
+async def test_does_not_allow_non_nullable_inputs_to_be_omitted_in_a_variable():
     doc = '''
     query SetsNonNullable($value: String!) {
         fieldWithNonNullableStringInput(input: $value)
     }
     '''
     with raises(GraphQLError) as excinfo:
-        check(doc, {})
+        await check(doc, {})
 
     assert format_error(excinfo.value) == {
         'locations': [{'column': 27, 'line': 2}],
@@ -361,7 +361,7 @@ def test_does_not_allow_non_nullable_inputs_to_be_omitted_in_a_variable():
     }
 
 
-def test_does_not_allow_non_nullable_inputs_to_be_set_to_null_in_a_variable():
+async def test_does_not_allow_non_nullable_inputs_to_be_set_to_null_in_a_variable():
     doc = '''
     query SetsNonNullable($value: String!) {
         fieldWithNonNullableStringInput(input: $value)
@@ -369,7 +369,7 @@ def test_does_not_allow_non_nullable_inputs_to_be_set_to_null_in_a_variable():
     '''
 
     with raises(GraphQLError) as excinfo:
-        check(doc, {}, {'value': None})
+        await check(doc, {}, {'value': None})
 
     assert format_error(excinfo.value) == {
         'locations': [{'column': 27, 'line': 2}],
@@ -377,91 +377,91 @@ def test_does_not_allow_non_nullable_inputs_to_be_set_to_null_in_a_variable():
     }
 
 
-def test_allows_non_nullable_inputs_to_be_set_to_a_value_in_a_variable():
+async def test_allows_non_nullable_inputs_to_be_set_to_a_value_in_a_variable():
     doc = '''
     query SetsNonNullable($value: String!) {
         fieldWithNonNullableStringInput(input: $value)
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'fieldWithNonNullableStringInput': '"a"'
         }
     }, {'value': 'a'})
 
 
-def test_allows_non_nullable_inputs_to_be_set_to_a_value_directly():
+async def test_allows_non_nullable_inputs_to_be_set_to_a_value_directly():
     doc = '''
     {
         fieldWithNonNullableStringInput(input: "a")
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'fieldWithNonNullableStringInput': '"a"'
         }
     })
 
 
-def test_passes_along_null_for_non_nullable_inputs_if_explcitly_set_in_the_query():
+async def test_passes_along_null_for_non_nullable_inputs_if_explcitly_set_in_the_query():
     doc = '''
     {
         fieldWithNonNullableStringInput
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'fieldWithNonNullableStringInput': None
         }
     })
 
 
-def test_allows_lists_to_be_null():
+async def test_allows_lists_to_be_null():
     doc = '''
     query q($input: [String]) {
         list(input: $input)
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'list': None
         }
     })
 
 
-def test_allows_lists_to_contain_values():
+async def test_allows_lists_to_contain_values():
     doc = '''
     query q($input: [String]) {
         list(input: $input)
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'list': stringify(['A'])
         }
     }, {'input': ['A']})
 
 
-def test_allows_lists_to_contain_null():
+async def test_allows_lists_to_contain_null():
     doc = '''
     query q($input: [String]) {
         list(input: $input)
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'list': stringify(['A', None, 'B'])
         }
     }, {'input': ['A', None, 'B']})
 
 
-def test_does_not_allow_non_null_lists_to_be_null():
+async def test_does_not_allow_non_null_lists_to_be_null():
     doc = '''
     query q($input: [String]!) {
         nnList(input: $input)
@@ -469,7 +469,7 @@ def test_does_not_allow_non_null_lists_to_be_null():
     '''
 
     with raises(GraphQLError) as excinfo:
-        check(doc, {}, {'input': None})
+        await check(doc, {}, {'input': None})
 
     assert format_error(excinfo.value) == {
         'locations': [{'column': 13, 'line': 2}],
@@ -477,63 +477,63 @@ def test_does_not_allow_non_null_lists_to_be_null():
     }
 
 
-def test_allows_non_null_lists_to_contain_values():
+async def test_allows_non_null_lists_to_contain_values():
     doc = '''
     query q($input: [String]!) {
         nnList(input: $input)
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'nnList': stringify(['A'])
         }
     }, {'input': ['A']})
 
 
-def test_allows_non_null_lists_to_contain_null():
+async def test_allows_non_null_lists_to_contain_null():
     doc = '''
     query q($input: [String]!) {
         nnList(input: $input)
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'nnList': stringify(['A', None, 'B'])
         }
     }, {'input': ['A', None, 'B']})
 
 
-def test_allows_lists_of_non_nulls_to_be_null():
+async def test_allows_lists_of_non_nulls_to_be_null():
     doc = '''
     query q($input: [String!]) {
         listNN(input: $input)
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'listNN': None
         }
     }, {'input': None})
 
 
-def test_allows_lists_of_non_nulls_to_contain_values():
+async def test_allows_lists_of_non_nulls_to_contain_values():
     doc = '''
     query q($input: [String!]) {
         listNN(input: $input)
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'listNN': stringify(['A'])
         }
     }, {'input': ['A']})
 
 
-def test_does_not_allow_lists_of_non_nulls_to_contain_null():
+async def test_does_not_allow_lists_of_non_nulls_to_contain_null():
     doc = '''
     query q($input: [String!]) {
         listNN(input: $input)
@@ -543,7 +543,7 @@ def test_does_not_allow_lists_of_non_nulls_to_contain_null():
     params = {'input': ['A', None, 'B']}
 
     with raises(GraphQLError) as excinfo:
-        check(doc, {}, params)
+        await check(doc, {}, params)
 
     assert format_error(excinfo.value) == {
         'locations': [{'column': 13, 'line': 2}],
@@ -552,14 +552,14 @@ def test_does_not_allow_lists_of_non_nulls_to_contain_null():
     }
 
 
-def test_does_not_allow_non_null_lists_of_non_nulls_to_be_null():
+async def test_does_not_allow_non_null_lists_of_non_nulls_to_be_null():
     doc = '''
     query q($input: [String!]!) {
         nnListNN(input: $input)
     }
     '''
     with raises(GraphQLError) as excinfo:
-        check(doc, {}, {'input': None})
+        await check(doc, {}, {'input': None})
 
     assert format_error(excinfo.value) == {
         'locations': [{'column': 13, 'line': 2}],
@@ -567,21 +567,21 @@ def test_does_not_allow_non_null_lists_of_non_nulls_to_be_null():
     }
 
 
-def test_allows_non_null_lists_of_non_nulls_to_contain_values():
+async def test_allows_non_null_lists_of_non_nulls_to_contain_values():
     doc = '''
     query q($input: [String!]!) {
         nnListNN(input: $input)
     }
     '''
 
-    check(doc, {
+    await check(doc, {
         'data': {
             'nnListNN': stringify(['A'])
         }
     }, {'input': ['A']})
 
 
-def test_does_not_allow_non_null_lists_of_non_nulls_to_contain_null():
+async def test_does_not_allow_non_null_lists_of_non_nulls_to_contain_null():
     doc = '''
     query q($input: [String!]!) {
         nnListNN(input: $input)
@@ -591,7 +591,7 @@ def test_does_not_allow_non_null_lists_of_non_nulls_to_contain_null():
     params = {'input': ['A', None, 'B']}
 
     with raises(GraphQLError) as excinfo:
-        check(doc, {}, params)
+        await check(doc, {}, params)
 
     assert format_error(excinfo.value) == {
         'locations': [{'column': 13, 'line': 2}],
@@ -600,7 +600,7 @@ def test_does_not_allow_non_null_lists_of_non_nulls_to_contain_null():
     }
 
 
-def test_does_not_allow_invalid_types_to_be_used_as_values():
+async def test_does_not_allow_invalid_types_to_be_used_as_values():
     doc = '''
     query q($input: TestType!) {
         fieldWithObjectInput(input: $input)
@@ -609,7 +609,7 @@ def test_does_not_allow_invalid_types_to_be_used_as_values():
     params = {'input': {'list': ['A', 'B']}}
 
     with raises(GraphQLError) as excinfo:
-        check(doc, {}, params)
+        await check(doc, {}, params)
 
     assert format_error(excinfo.value) == {
         'locations': [{'column': 13, 'line': 2}],
@@ -617,7 +617,7 @@ def test_does_not_allow_invalid_types_to_be_used_as_values():
     }
 
 
-def test_does_not_allow_unknown_types_to_be_used_as_values():
+async def test_does_not_allow_unknown_types_to_be_used_as_values():
     doc = '''
     query q($input: UnknownType!) {
         fieldWithObjectInput(input: $input)
@@ -626,7 +626,7 @@ def test_does_not_allow_unknown_types_to_be_used_as_values():
     params = {'input': 'whoknows'}
 
     with raises(GraphQLError) as excinfo:
-        check(doc, {}, params)
+        await check(doc, {}, params)
 
     assert format_error(excinfo.value) == {
         'locations': [{'column': 13, 'line': 2}],
@@ -637,15 +637,15 @@ def test_does_not_allow_unknown_types_to_be_used_as_values():
 # noinspection PyMethodMayBeStatic
 class TestUsesArgumentDefaultValues:
 
-    def test_when_no_argument_provided(self):
-        check('{ fieldWithDefaultArgumentValue }', {
+    async def test_when_no_argument_provided(self):
+        await check('{ fieldWithDefaultArgumentValue }', {
             'data': {
                 'fieldWithDefaultArgumentValue': '"Hello World"'
             }
         })
 
-    def test_when_nullable_variable_provided(self):
-        check('''
+    async def test_when_nullable_variable_provided(self):
+        await check('''
         query optionalVariable($optional: String) {
             fieldWithDefaultArgumentValue(input: $optional)
         }
@@ -655,8 +655,8 @@ class TestUsesArgumentDefaultValues:
             }
         })
 
-    def test_when_argument_provided_cannot_be_parsed(self):
-        check('''
+    async def test_when_argument_provided_cannot_be_parsed(self):
+        await check('''
         {
             fieldWithDefaultArgumentValue(input: WRONG_TYPE)
         }

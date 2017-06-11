@@ -5,7 +5,7 @@ from graphql.type import (GraphQLArgument, GraphQLBoolean, GraphQLField,
                           GraphQLObjectType, GraphQLSchema, GraphQLString)
 
 
-def test_executes_using_a_schema():
+async def test_executes_using_a_schema():
     BlogImage = GraphQLObjectType('BlogImage', {
         'url': GraphQLField(GraphQLString),
         'width': GraphQLField(GraphQLInt),
@@ -110,7 +110,7 @@ def test_executes_using_a_schema():
 
     # Note: this is intentionally not validating to ensure appropriate
     # behavior occurs when executing an invalid query.
-    result = execute(BlogSchema, parse(request))
+    result = await execute(BlogSchema, parse(request))
     assert not result.errors
     assert result.data == \
         {

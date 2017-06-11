@@ -13,7 +13,7 @@ ast = parse('{ nest { test } }')
 
 
 def check(test_data, expected):
-    def run_check(self):
+    async def run_check(self):
         test_type = self.type
 
         data = Data(test=test_data)
@@ -26,7 +26,7 @@ def check(test_data, expected):
         )
 
         schema = GraphQLSchema(query=DataType)
-        response = execute(schema, ast, data)
+        response = await execute(schema, ast, data)
 
         if response.errors:
             result = {

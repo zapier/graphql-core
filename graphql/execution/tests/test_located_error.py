@@ -9,7 +9,7 @@ from graphql import parse
 from graphql.error import GraphQLLocatedError
 
 
-def test_unicode_error_message():
+async def test_unicode_error_message():
     ast = parse('query Example { unicode }')
 
     def resolver(context, *_):
@@ -19,5 +19,5 @@ def test_unicode_error_message():
         'unicode': GraphQLField(GraphQLString, resolver=resolver),
     })
 
-    result = execute(GraphQLSchema(Type), ast)
+    result = await execute(GraphQLSchema(Type), ast)
     assert isinstance(result.errors[0], GraphQLLocatedError)

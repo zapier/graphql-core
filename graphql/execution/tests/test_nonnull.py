@@ -5,8 +5,6 @@ from graphql.language.parser import parse
 from graphql.type import (GraphQLField, GraphQLNonNull, GraphQLObjectType,
                           GraphQLSchema, GraphQLString)
 
-from .utils import rejected, resolved
-
 sync_error = Exception('sync')
 non_null_sync_error = Exception('nonNullSync')
 promise_error = Exception('promise')
@@ -21,11 +19,11 @@ class ThrowingData(object):
     def nonNullSync(self):
         raise non_null_sync_error
 
-    def promise(self):
-        return rejected(promise_error)
+    async def promise(self):
+        raise promise_error
 
-    def nonNullPromise(self):
-        return rejected(non_null_promise_error)
+    async def nonNullPromise(self):
+        raise non_null_promise_error
 
     def nest(self):
         return ThrowingData()
@@ -33,11 +31,11 @@ class ThrowingData(object):
     def nonNullNest(self):
         return ThrowingData()
 
-    def promiseNest(self):
-        return resolved(ThrowingData())
+    async def promiseNest(self):
+        return ThrowingData()
 
-    def nonNullPromiseNest(self):
-        return resolved(ThrowingData())
+    async def nonNullPromiseNest(self):
+        return ThrowingData()
 
 
 class NullingData(object):
@@ -48,11 +46,11 @@ class NullingData(object):
     def nonNullSync(self):
         return None
 
-    def promise(self):
-        return resolved(None)
+    async def promise(self):
+        return None
 
-    def nonNullPromise(self):
-        return resolved(None)
+    async def nonNullPromise(self):
+        return None
 
     def nest(self):
         return NullingData()
@@ -60,11 +58,11 @@ class NullingData(object):
     def nonNullNest(self):
         return NullingData()
 
-    def promiseNest(self):
-        return resolved(NullingData())
+    async def promiseNest(self):
+        return NullingData()
 
-    def nonNullPromiseNest(self):
-        return resolved(NullingData())
+    async def nonNullPromiseNest(self):
+        return NullingData()
 
 
 DataType = GraphQLObjectType('DataType', lambda: {
@@ -86,9 +84,9 @@ def order_errors(error):
     return (locations[0]['column'], locations[0]['line'])
 
 
-def check(doc, data, expected):
+async def check(doc, data, expected):
     ast = parse(doc)
-    response = execute(schema, ast, data)
+    response = await execute(schema, ast, data)
 
     if response.errors:
         result = {
@@ -111,33 +109,33 @@ def check(doc, data, expected):
         assert result == expected
 
 
-def test_nulls_a_nullable_field_that_throws_sync():
+async def test_nulls_a_nullable_field_that_throws_sync():
     doc = '''
         query Q {
             sync
         }
     '''
 
-    check(doc, ThrowingData(), {
+    await check(doc, ThrowingData(), {
         'data': {'sync': None},
         'errors': [{'locations': [{'column': 13, 'line': 3}], 'message': str(sync_error)}]
     })
 
 
-def test_nulls_a_nullable_field_that_throws_in_a_promise():
+async def test_nulls_a_nullable_field_that_throws_in_a_promise():
     doc = '''
         query Q {
             promise
         }
     '''
 
-    check(doc, ThrowingData(), {
+    await check(doc, ThrowingData(), {
         'data': {'promise': None},
         'errors': [{'locations': [{'column': 13, 'line': 3}], 'message': str(promise_error)}]
     })
 
 
-def test_nulls_a_sync_returned_object_that_contains_a_non_nullable_field_that_throws():
+async def test_nulls_a_sync_returned_object_that_contains_a_non_nullable_field_that_throws():
     doc = '''
         query Q {
             nest {
@@ -146,14 +144,14 @@ def test_nulls_a_sync_returned_object_that_contains_a_non_nullable_field_that_th
         }
     '''
 
-    check(doc, ThrowingData(), {
+    await check(doc, ThrowingData(), {
         'data': {'nest': None},
         'errors': [{'locations': [{'column': 17, 'line': 4}],
                     'message': str(non_null_sync_error)}]
     })
 
 
-def test_nulls_a_synchronously_returned_object_that_contains_a_non_nullable_field_that_throws_in_a_promise():
+async def test_nulls_a_synchronously_returned_object_that_contains_a_non_nullable_field_that_throws_in_a_promise():
     doc = '''
         query Q {
             nest {
@@ -162,14 +160,14 @@ def test_nulls_a_synchronously_returned_object_that_contains_a_non_nullable_fiel
         }
     '''
 
-    check(doc, ThrowingData(), {
+    await check(doc, ThrowingData(), {
         'data': {'nest': None},
         'errors': [{'locations': [{'column': 17, 'line': 4}],
                     'message': str(non_null_promise_error)}]
     })
 
 
-def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_field_that_throws_synchronously():
+async def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_field_that_throws_synchronously():
     doc = '''
         query Q {
             promiseNest {
@@ -178,14 +176,14 @@ def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_fiel
         }
     '''
 
-    check(doc, ThrowingData(), {
+    await check(doc, ThrowingData(), {
         'data': {'promiseNest': None},
         'errors': [{'locations': [{'column': 17, 'line': 4}],
                     'message': str(non_null_sync_error)}]
     })
 
 
-def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_field_that_throws_in_a_promise():
+async def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_field_that_throws_in_a_promise():
     doc = '''
         query Q {
             promiseNest {
@@ -194,14 +192,14 @@ def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_fiel
         }
     '''
 
-    check(doc, ThrowingData(), {
+    await check(doc, ThrowingData(), {
         'data': {'promiseNest': None},
         'errors': [{'locations': [{'column': 17, 'line': 4}],
                     'message': str(non_null_promise_error)}]
     })
 
 
-def test_nulls_a_complex_tree_of_nullable_fields_that_throw():
+async def test_nulls_a_complex_tree_of_nullable_fields_that_throw():
     doc = '''
       query Q {
         nest {
@@ -230,7 +228,7 @@ def test_nulls_a_complex_tree_of_nullable_fields_that_throw():
         }
       }
     '''
-    check(doc, ThrowingData(), {
+    await check(doc, ThrowingData(), {
         'data': {'nest': {'nest': {'promise': None, 'sync': None},
                           'promise': None,
                           'promiseNest': {'promise': None, 'sync': None},
@@ -254,7 +252,7 @@ def test_nulls_a_complex_tree_of_nullable_fields_that_throw():
     })
 
 
-def test_nulls_the_first_nullable_object_after_a_field_throws_in_a_long_chain_of_fields_that_are_non_null():
+async def test_nulls_the_first_nullable_object_after_a_field_throws_in_a_long_chain_of_fields_that_are_non_null():
     doc = '''
     query Q {
         nest {
@@ -303,7 +301,7 @@ def test_nulls_the_first_nullable_object_after_a_field_throws_in_a_long_chain_of
         }
       }
     '''
-    check(doc, ThrowingData(), {
+    await check(doc, ThrowingData(), {
         'data': {'nest': None, 'promiseNest': None, 'anotherNest': None, 'anotherPromiseNest': None},
         'errors': [{'locations': [{'column': 19, 'line': 8}],
                     'message': str(non_null_sync_error)},
@@ -316,31 +314,31 @@ def test_nulls_the_first_nullable_object_after_a_field_throws_in_a_long_chain_of
     })
 
 
-def test_nulls_a_nullable_field_that_returns_null():
+async def test_nulls_a_nullable_field_that_returns_null():
     doc = '''
         query Q {
             sync
         }
     '''
 
-    check(doc, NullingData(), {
+    await check(doc, NullingData(), {
         'data': {'sync': None}
     })
 
 
-def test_nulls_a_nullable_field_that_returns_null_in_a_promise():
+async def test_nulls_a_nullable_field_that_returns_null_in_a_promise():
     doc = '''
         query Q {
             promise
         }
     '''
 
-    check(doc, NullingData(), {
+    await check(doc, NullingData(), {
         'data': {'promise': None}
     })
 
 
-def test_nulls_a_sync_returned_object_that_contains_a_non_nullable_field_that_returns_null_synchronously():
+async def test_nulls_a_sync_returned_object_that_contains_a_non_nullable_field_that_returns_null_synchronously():
     doc = '''
         query Q {
             nest {
@@ -348,14 +346,14 @@ def test_nulls_a_sync_returned_object_that_contains_a_non_nullable_field_that_re
             }
         }
     '''
-    check(doc, NullingData(), {
+    await check(doc, NullingData(), {
         'data': {'nest': None},
         'errors': [{'locations': [{'column': 17, 'line': 4}],
                     'message': 'Cannot return null for non-nullable field DataType.nonNullSync.'}]
     })
 
 
-def test_nulls_a_synchronously_returned_object_that_contains_a_non_nullable_field_that_returns_null_in_a_promise():
+async def test_nulls_a_synchronously_returned_object_that_contains_a_non_nullable_field_that_returns_null_in_a_promise():
     doc = '''
         query Q {
             nest {
@@ -363,14 +361,14 @@ def test_nulls_a_synchronously_returned_object_that_contains_a_non_nullable_fiel
             }
         }
     '''
-    check(doc, NullingData(), {
+    await check(doc, NullingData(), {
         'data': {'nest': None},
         'errors': [{'locations': [{'column': 17, 'line': 4}],
                     'message': 'Cannot return null for non-nullable field DataType.nonNullPromise.'}]
     })
 
 
-def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_field_that_returns_null_synchronously():
+async def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_field_that_returns_null_synchronously():
     doc = '''
         query Q {
             promiseNest {
@@ -378,14 +376,14 @@ def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_fiel
             }
         }
     '''
-    check(doc, NullingData(), {
+    await check(doc, NullingData(), {
         'data': {'promiseNest': None},
         'errors': [{'locations': [{'column': 17, 'line': 4}],
                     'message': 'Cannot return null for non-nullable field DataType.nonNullSync.'}]
     })
 
 
-def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_field_that_returns_null_ina_a_promise():
+async def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_field_that_returns_null_ina_a_promise():
     doc = '''
         query Q {
             promiseNest {
@@ -394,7 +392,7 @@ def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_fiel
         }
     '''
 
-    check(doc, NullingData(), {
+    await check(doc, NullingData(), {
         'data': {'promiseNest': None},
         'errors': [
             {'locations': [{'column': 17, 'line': 4}],
@@ -403,7 +401,7 @@ def test_nulls_an_object_returned_in_a_promise_that_contains_a_non_nullable_fiel
     })
 
 
-def test_nulls_a_complex_tree_of_nullable_fields_that_returns_null():
+async def test_nulls_a_complex_tree_of_nullable_fields_that_returns_null():
     doc = '''
       query Q {
         nest {
@@ -432,7 +430,7 @@ def test_nulls_a_complex_tree_of_nullable_fields_that_returns_null():
         }
       }
     '''
-    check(doc, NullingData(), {
+    await check(doc, NullingData(), {
         'data': {
             'nest': {
                 'sync': None,
@@ -462,7 +460,7 @@ def test_nulls_a_complex_tree_of_nullable_fields_that_returns_null():
     })
 
 
-def test_nulls_the_first_nullable_object_after_a_field_returns_null_in_a_long_chain_of_fields_that_are_non_null():
+async def test_nulls_the_first_nullable_object_after_a_field_returns_null_in_a_long_chain_of_fields_that_are_non_null():
     doc = '''
       query Q {
         nest {
@@ -512,7 +510,7 @@ def test_nulls_the_first_nullable_object_after_a_field_returns_null_in_a_long_ch
       }
     '''
 
-    check(doc, NullingData(), {
+    await check(doc, NullingData(), {
         'data': {
             'nest': None,
             'promiseNest': None,
@@ -532,11 +530,11 @@ def test_nulls_the_first_nullable_object_after_a_field_returns_null_in_a_long_ch
     })
 
 
-def test_nulls_the_top_level_if_sync_non_nullable_field_throws():
+async def test_nulls_the_top_level_if_sync_non_nullable_field_throws():
     doc = '''
         query Q { nonNullSync }
     '''
-    check(doc, ThrowingData(), {
+    await check(doc, ThrowingData(), {
         'data': None,
         'errors': [
             {'locations': [{'column': 19, 'line': 2}],
@@ -545,12 +543,12 @@ def test_nulls_the_top_level_if_sync_non_nullable_field_throws():
     })
 
 
-def test_nulls_the_top_level_if_async_non_nullable_field_errors():
+async def test_nulls_the_top_level_if_async_non_nullable_field_errors():
     doc = '''
         query Q { nonNullPromise }
     '''
 
-    check(doc, ThrowingData(), {
+    await check(doc, ThrowingData(), {
         'data': None,
         'errors': [
             {'locations': [{'column': 19, 'line': 2}],
@@ -559,11 +557,11 @@ def test_nulls_the_top_level_if_async_non_nullable_field_errors():
     })
 
 
-def test_nulls_the_top_level_if_sync_non_nullable_field_returns_null():
+async def test_nulls_the_top_level_if_sync_non_nullable_field_returns_null():
     doc = '''
         query Q { nonNullSync }
     '''
-    check(doc, NullingData(), {
+    await check(doc, NullingData(), {
         'data': None,
         'errors': [
             {'locations': [{'column': 19, 'line': 2}],
@@ -572,11 +570,11 @@ def test_nulls_the_top_level_if_sync_non_nullable_field_returns_null():
     })
 
 
-def test_nulls_the_top_level_if_async_non_nullable_field_resolves_null():
+async def test_nulls_the_top_level_if_async_non_nullable_field_resolves_null():
     doc = '''
         query Q { nonNullPromise }
     '''
-    check(doc, NullingData(), {
+    await check(doc, NullingData(), {
         'data': None,
         'errors': [
             {'locations': [{'column': 19, 'line': 2}],

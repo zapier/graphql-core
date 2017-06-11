@@ -66,7 +66,7 @@ MutationType = GraphQLObjectType('Mutation', {
 schema = GraphQLSchema(QueryType, MutationType)
 
 
-def assert_evaluate_mutations_serially(executor=None):
+async def assert_evaluate_mutations_serially(executor=None):
     doc = '''mutation M {
       first: immediatelyChangeTheNumber(newNumber: 1) {
         theNumber
@@ -85,7 +85,7 @@ def assert_evaluate_mutations_serially(executor=None):
       }
     }'''
     ast = parse(doc)
-    result = execute(schema, ast, Root(6), operation_name='M', executor=executor)
+    result = await execute(schema, ast, Root(6), operation_name='M', executor=executor)
     assert not result.errors
     assert result.data == \
         {
@@ -101,7 +101,7 @@ def test_evaluates_mutations_serially():
     assert_evaluate_mutations_serially()
 
 
-def test_evaluates_mutations_correctly_in_the_presense_of_a_failed_mutation():
+async def test_evaluates_mutations_correctly_in_the_presense_of_a_failed_mutation():
     doc = '''mutation M {
       first: immediatelyChangeTheNumber(newNumber: 1) {
         theNumber
@@ -123,7 +123,7 @@ def test_evaluates_mutations_correctly_in_the_presense_of_a_failed_mutation():
       }
     }'''
     ast = parse(doc)
-    result = execute(schema, ast, Root(6), operation_name='M')
+    result = await execute(schema, ast, Root(6), operation_name='M')
     assert result.data == \
         {
             'first': {'theNumber': 1},

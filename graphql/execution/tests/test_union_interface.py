@@ -83,7 +83,7 @@ john = Person('John', [garfield, odie], [liz, odie])
 
 # Execute: Union and intersection types
 
-def test_can_introspect_on_union_and_intersection_types():
+async def test_can_introspect_on_union_and_intersection_types():
     ast = parse('''
     {
         Named: __type(name: "Named") {
@@ -106,7 +106,7 @@ def test_can_introspect_on_union_and_intersection_types():
         }
     }''')
 
-    result = execute(schema, ast)
+    result = await execute(schema, ast)
     assert not result.errors
     assert result.data == {
         'Named': {
@@ -130,7 +130,7 @@ def test_can_introspect_on_union_and_intersection_types():
     }
 
 
-def test_executes_using_union_types():
+async def test_executes_using_union_types():
     # NOTE: This is an *invalid* query, but it should be an *executable* query.
     ast = parse('''
         {
@@ -144,7 +144,7 @@ def test_executes_using_union_types():
             }
         }
     ''')
-    result = execute(schema, ast, john)
+    result = await execute(schema, ast, john)
     assert not result.errors
     assert result.data == {
         '__typename': 'Person',
@@ -156,7 +156,7 @@ def test_executes_using_union_types():
     }
 
 
-def test_executes_union_types_with_inline_fragment():
+async def test_executes_union_types_with_inline_fragment():
     # This is the valid version of the query in the above test.
     ast = parse('''
       {
@@ -175,7 +175,7 @@ def test_executes_union_types_with_inline_fragment():
         }
       }
     ''')
-    result = execute(schema, ast, john)
+    result = await execute(schema, ast, john)
     assert not result.errors
     assert result.data == {
         '__typename': 'Person',
@@ -187,7 +187,7 @@ def test_executes_union_types_with_inline_fragment():
     }
 
 
-def test_executes_using_interface_types():
+async def test_executes_using_interface_types():
     # NOTE: This is an *invalid* query, but it should be an *executable* query.
     ast = parse('''
       {
@@ -201,7 +201,7 @@ def test_executes_using_interface_types():
         }
       }
     ''')
-    result = execute(schema, ast, john)
+    result = await execute(schema, ast, john)
     assert not result.errors
     assert result.data == {
         '__typename': 'Person',
@@ -213,7 +213,7 @@ def test_executes_using_interface_types():
     }
 
 
-def test_executes_interface_types_with_inline_fragment():
+async def test_executes_interface_types_with_inline_fragment():
     # This is the valid version of the query in the above test.
     ast = parse('''
       {
@@ -231,7 +231,7 @@ def test_executes_interface_types_with_inline_fragment():
         }
       }
     ''')
-    result = execute(schema, ast, john)
+    result = await execute(schema, ast, john)
     assert not result.errors
     assert result.data == {
         '__typename': 'Person',
@@ -243,7 +243,7 @@ def test_executes_interface_types_with_inline_fragment():
     }
 
 
-def test_allows_fragment_conditions_to_be_abstract_types():
+async def test_allows_fragment_conditions_to_be_abstract_types():
     ast = parse('''
       {
         __typename
@@ -273,7 +273,7 @@ def test_allows_fragment_conditions_to_be_abstract_types():
         }
       }
     ''')
-    result = execute(schema, ast, john)
+    result = await execute(schema, ast, john)
     assert not result.errors
     assert result.data == {
         '__typename': 'Person',
@@ -289,7 +289,7 @@ def test_allows_fragment_conditions_to_be_abstract_types():
     }
 
 
-def test_only_include_fields_from_matching_fragment_condition():
+async def test_only_include_fields_from_matching_fragment_condition():
     ast = parse('''
       {
         pets { ...PetFields }
@@ -301,7 +301,7 @@ def test_only_include_fields_from_matching_fragment_condition():
         }
       }
     ''')
-    result = execute(schema, ast, john)
+    result = await execute(schema, ast, john)
     assert not result.errors
     assert result.data == {
         'pets': [
@@ -311,7 +311,7 @@ def test_only_include_fields_from_matching_fragment_condition():
     }
 
 
-def test_gets_execution_info_in_resolver():
+async def test_gets_execution_info_in_resolver():
     class encountered:
         schema = None
         root_value = None
@@ -345,7 +345,7 @@ def test_gets_execution_info_in_resolver():
     context = {'hey'}
     ast = parse('''{ name, friends { name } }''')
 
-    result = execute(schema2, ast, john2, context_value=context)
+    result = await execute(schema2, ast, john2, context_value=context)
     assert not result.errors
     assert result.data == {
         'name': 'John', 'friends': [{'name': 'Liz'}]
