@@ -28,7 +28,6 @@ tests_requires = [
     'pytest-django==2.9.1',
     'pytest-cov==2.3.1',
     'coveralls',
-    'gevent==1.1rc1',
     'six>=1.10.0',
     'pytest-benchmark==3.0.0',
     'pytest-mock==1.2',
@@ -79,9 +78,6 @@ setup(
     tests_require=tests_requires,
     cmdclass = {'test': PyTest},
     extras_require={
-        'gevent': [
-            'gevent==1.1rc1'
-        ],
         'test': tests_requires
     }
 )
