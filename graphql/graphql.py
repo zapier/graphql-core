@@ -1,3 +1,5 @@
+import asyncio
+
 from .execution import ExecutionResult, execute
 from .language.ast import Document
 from .language.parser import parse
@@ -42,7 +44,7 @@ def graphql(schema, request_string='', root_value=None, context_value=None,
                 errors=validation_errors,
                 invalid=True,
             )
-        return execute(
+        awaited = execute(
             schema,
             ast,
             root_value,
@@ -53,6 +55,8 @@ def graphql(schema, request_string='', root_value=None, context_value=None,
             return_promise=return_promise,
             middleware=middleware,
         )
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(awaited)
     except Exception as e:
         return ExecutionResult(
             errors=[e],

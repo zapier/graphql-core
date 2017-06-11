@@ -1,3 +1,5 @@
+import pytest
+
 from collections import OrderedDict
 
 from pytest import raises
@@ -102,7 +104,8 @@ def test_extends_without_altering_original_schema():
     assert 'newField' not in print_schema(test_schema)
 
 
-def test_cannot_be_used_for_execution():
+@pytest.mark.asyncio
+async def test_cannot_be_used_for_execution():
     ast = parse('''
       extend type Query {
         newField: String
@@ -111,7 +114,7 @@ def test_cannot_be_used_for_execution():
     extended_schema = extend_schema(test_schema, ast)
     clientQuery = parse('{ newField }')
 
-    result = execute(extended_schema, clientQuery, object())
+    result = await execute(extended_schema, clientQuery, object())
     assert result.data['newField'] is None
     assert str(result.errors[0]
                ) == 'Client Schema cannot be used for execution.'

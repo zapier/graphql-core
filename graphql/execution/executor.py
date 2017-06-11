@@ -56,15 +56,14 @@ async def execute(schema, document_ast, root_value=None, context_value=None,
         context.errors.append(error)
         return None
 
-    def on_resolve(data):
+    try:
+        data = await execute_operation(context, context.operation, root_value)
+    except Exception as e:
+        data = on_rejected(e)
+    finally:
         if not context.errors:
             return ExecutionResult(data=data)
         return ExecutionResult(data=data, errors=context.errors)
-
-    try:
-        return on_resolve(await execute_operation(context, context.operation, root_value))
-    except Exception as e:
-        return on_rejected(e)
 
 
 async def execute_operation(exe_context, operation, root_value):
@@ -78,15 +77,15 @@ async def execute_operation(exe_context, operation, root_value):
     )
 
     if operation.operation == 'mutation':
-        return execute_fields_serially(exe_context, type, root_value, fields)
+        return await execute_fields_serially(exe_context, type, root_value, fields)
 
     return await execute_fields(exe_context, type, root_value, fields)
 
 
-def execute_fields_serially(exe_context, parent_type, source_value, fields):
-    def execute_field_callback(results, response_name):
+async def execute_fields_serially(exe_context, parent_type, source_value, fields):
+    async def execute_field_callback(results, response_name):
         field_asts = fields[response_name]
-        result = resolve_field(
+        result = await resolve_field(
             exe_context,
             parent_type,
             source_value,
@@ -99,8 +98,8 @@ def execute_fields_serially(exe_context, parent_type, source_value, fields):
         return results
 
     results = collections.OrderedDict()
-    for f in fields.key():
-        execute_field_callback(results, f)
+    for f in fields.keys():
+        await execute_field_callback(results, f)
 
     return results
 

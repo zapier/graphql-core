@@ -32,6 +32,7 @@ tests_requires = [
     'six>=1.10.0',
     'pytest-benchmark==3.0.0',
     'pytest-mock==1.2',
+    'pytest-asyncio',
 ]
 
 class PyTest(TestCommand):
