@@ -1,13 +1,12 @@
 language: python
 sudo: false
 python:
-- 3.4
 - 3.5
 - 3.6
 install:
 - pip install -e .[test]
 script:
-- py.test --cov=graphql graphql tests tests_py35
+- py.test --cov=graphql graphql tests
 after_success:
 - coveralls
 matrix:
@@ -15,7 +14,7 @@ matrix:
   - python: '3.5'
     install: pip install flake8
     script:
-    - flake8
+    - flake8 graphql
 deploy:
   provider: pypi
   user: syrusakbary

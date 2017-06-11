@@ -1,7 +1,7 @@
 import collections
 import logging
 import sys
-from asyncio import iscoroutine, get_event_loop, gather
+from asyncio import iscoroutine, gather
 
 from six import string_types
 
@@ -21,9 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 async def execute(schema, document_ast, root_value=None, context_value=None,
-            variable_values=None, operation_name=None, executor=None,
-            return_promise=False, middleware=None):
-
+                  variable_values=None, operation_name=None, executor=None,
+                  return_promise=False, middleware=None):
     assert schema, 'Must provide schema'
     assert isinstance(schema, GraphQLSchema), (
         'Schema must be an instance of GraphQLSchema. Also ensure that there are ' +
@@ -37,6 +36,8 @@ async def execute(schema, document_ast, root_value=None, context_value=None,
             'middlewares have to be an instance'
             ' of MiddlewareManager. Received "{}".'.format(middleware)
         )
+
+    assert not return_promise, "Returns promise is no longer supported"
 
     if executor is None:
         executor = SyncExecutor()
@@ -127,7 +128,6 @@ async def execute_fields(exe_context, parent_type, source_value, fields):
             raise r
 
         final_results[corroutz_name[i]] = r
-
 
     return final_results
 

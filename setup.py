@@ -24,7 +24,7 @@ install_requires = [
 ]
 
 tests_requires = [
-    'pytest==3.0.2',
+    'pytest>=3.0.2',
     'pytest-django==2.9.1',
     'pytest-cov==2.3.1',
     'coveralls',

@@ -5,7 +5,6 @@ import functools
 from graphql.error import format_error
 from graphql.execution import execute
 from graphql.language.parser import parse
-from graphql.execution.executors.asyncio import AsyncioExecutor
 from graphql.type import (
     GraphQLSchema,
     GraphQLObjectType,
@@ -14,7 +13,7 @@ from graphql.type import (
 )
 
 
-def test_asyncio_py35_executor():
+async def test_asyncio_py35_executor():
     ast = parse('query Example { a, b, c }')
 
     async def resolver(context, *_):
@@ -34,12 +33,12 @@ def test_asyncio_py35_executor():
         'c': GraphQLField(GraphQLString, resolver=resolver_3)
     })
 
-    result = execute(GraphQLSchema(Type), ast, executor=AsyncioExecutor())
+    result = await execute(GraphQLSchema(Type), ast)
     assert not result.errors
     assert result.data == {'a': 'hey', 'b': 'hey2', 'c': 'hey3'}
 
 
-def test_asyncio_py35_executor_return_promise():
+async def test_asyncio_py35_executor_return_promise():
     ast = parse('query Example { a, b, c }')
 
     async def resolver(context, *_):
@@ -59,17 +58,12 @@ def test_asyncio_py35_executor_return_promise():
         'c': GraphQLField(GraphQLString, resolver=resolver_3)
     })
 
-    loop = asyncio.get_event_loop()
-
-    async def do_exec():
-        result = await execute(GraphQLSchema(Type), ast, executor=AsyncioExecutor(loop), return_promise=True)
-        assert not result.errors
-        assert result.data == {'a': 'hey', 'b': 'hey2', 'c': 'hey3'}
-
-    loop.run_until_complete(do_exec())
+    result = await execute(GraphQLSchema(Type), ast, return_promise=True)
+    assert not result.errors
+    assert result.data == {'a': 'hey', 'b': 'hey2', 'c': 'hey3'}
 
 
-def test_asyncio_py35_executor_with_error():
+async def test_asyncio_py35_executor_with_error():
     ast = parse('query Example { a, b }')
 
     async def resolver(context, *_):
@@ -85,7 +79,7 @@ def test_asyncio_py35_executor_with_error():
         'b': GraphQLField(GraphQLString, resolver=resolver_2)
     })
 
-    result = execute(GraphQLSchema(Type), ast, executor=AsyncioExecutor())
+    result = await execute(GraphQLSchema(Type), ast)
     formatted_errors = list(map(format_error, result.errors))
     assert formatted_errors == [{'locations': [{'line': 1, 'column': 20}], 'message': 'resolver_2 failed!'}]
     assert result.data == {'a': 'hey', 'b': None}

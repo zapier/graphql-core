@@ -1,7 +1,6 @@
 import inspect
 from functools import partial
 from itertools import chain
-import asyncio
 
 
 MIDDLEWARE_RESOLVER_FUNCTION = 'resolve'
@@ -49,4 +48,3 @@ def middleware_chain(func, middlewares, wrap_in_promise=False):
         last_func = partial(middleware, last_func) if last_func else middleware
 
     return last_func
-
