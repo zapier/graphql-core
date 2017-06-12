@@ -61,7 +61,7 @@ async def test_asyncio_py35_executor_return_promise():
         'c': GraphQLField(GraphQLString, resolver=resolver_3)
     })
 
-    result = await execute(GraphQLSchema(Type), ast, return_promise=True)
+    result = await execute(GraphQLSchema(Type), ast)
     assert not result.errors
     assert result.data == {'a': 'hey', 'b': 'hey2', 'c': 'hey3'}
 

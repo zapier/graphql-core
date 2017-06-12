@@ -1,3 +1,4 @@
+import pytest
 from graphql import graphql
 from graphql.error import format_error
 from graphql.pyutils.contain_subset import contain_subset
@@ -5,7 +6,10 @@ from graphql.pyutils.contain_subset import contain_subset
 from .starwars_schema import StarWarsSchema
 
 
-def test_allows_querying_the_schema_for_types():
+pytestmark = pytest.mark.asyncio
+
+
+async def test_allows_querying_the_schema_for_types():
     query = '''
         query IntrospectionTypeQuery {
           __schema {
@@ -67,12 +71,12 @@ def test_allows_querying_the_schema_for_types():
         }
     }
 
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert contain_subset(result.data, expected)
 
 
-def test_allows_querying_the_schema_for_query_type():
+async def test_allows_querying_the_schema_for_query_type():
     query = '''
       query IntrospectionQueryTypeQuery {
         __schema {
@@ -90,12 +94,12 @@ def test_allows_querying_the_schema_for_query_type():
             },
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert contain_subset(result.data, expected)
 
 
-def test_allows_querying_the_schema_for_a_specific_type():
+async def test_allows_querying_the_schema_for_a_specific_type():
     query = '''
       query IntrospectionDroidTypeQuery {
         __type(name: "Droid") {
@@ -109,12 +113,12 @@ def test_allows_querying_the_schema_for_a_specific_type():
             'name': 'Droid'
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert contain_subset(result.data, expected)
 
 
-def test_allows_querying_the_schema_for_an_object_kind():
+async def test_allows_querying_the_schema_for_an_object_kind():
     query = '''
       query IntrospectionDroidKindQuery {
         __type(name: "Droid") {
@@ -130,12 +134,12 @@ def test_allows_querying_the_schema_for_an_object_kind():
             'kind': 'OBJECT'
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert contain_subset(result.data, expected)
 
 
-def test_allows_querying_the_schema_for_an_interface_kind():
+async def test_allows_querying_the_schema_for_an_interface_kind():
     query = '''
       query IntrospectionCharacterKindQuery {
         __type(name: "Character") {
@@ -150,12 +154,12 @@ def test_allows_querying_the_schema_for_an_interface_kind():
             'kind': 'INTERFACE'
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert contain_subset(result.data, expected)
 
 
-def test_allows_querying_the_schema_for_object_fields():
+async def test_allows_querying_the_schema_for_object_fields():
     query = '''
       query IntrospectionDroidFieldsQuery {
         __type(name: "Droid") {
@@ -214,12 +218,12 @@ def test_allows_querying_the_schema_for_object_fields():
         }
     }
 
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert contain_subset(result.data, expected)
 
 
-def test_allows_querying_the_schema_for_nested_object_fields():
+async def test_allows_querying_the_schema_for_nested_object_fields():
     query = '''
       query IntrospectionDroidNestedFieldsQuery {
         __type(name: "Droid") {
@@ -295,12 +299,12 @@ def test_allows_querying_the_schema_for_nested_object_fields():
             ]
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert contain_subset(result.data, expected)
 
 
-def test_allows_querying_the_schema_for_field_args():
+async def test_allows_querying_the_schema_for_field_args():
     query = '''
       query IntrospectionQueryTypeQuery {
         __schema {
@@ -388,12 +392,12 @@ def test_allows_querying_the_schema_for_field_args():
         }
     }
 
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert contain_subset(result.data, expected)
 
 
-def test_allows_querying_the_schema_for_documentation():
+async def test_allows_querying_the_schema_for_documentation():
     query = '''
       query IntrospectionDroidDescriptionQuery {
         __type(name: "Droid") {
@@ -409,6 +413,6 @@ def test_allows_querying_the_schema_for_documentation():
             'description': 'A mechanical creature in the Star Wars universe.'
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert contain_subset(result.data, expected)

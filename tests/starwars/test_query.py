@@ -1,10 +1,14 @@
+import pytest
+
 from graphql import graphql
 from graphql.error import format_error
 
 from .starwars_schema import StarWarsSchema
 
+pytestmark = pytest.mark.asyncio
 
-def test_hero_name_query():
+
+async def test_hero_name_query():
     query = '''
         query HeroNameQuery {
           hero {
@@ -12,17 +16,13 @@ def test_hero_name_query():
           }
         }
     '''
-    expected = {
-        'hero': {
-            'name': 'R2-D2'
-        }
-    }
-    result = graphql(StarWarsSchema, query)
+    expected = {'hero': {'name': 'R2-D2'}}
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert result.data == expected
 
 
-def test_hero_name_and_friends_query():
+async def test_hero_name_and_friends_query():
     query = '''
         query HeroNameAndFriendsQuery {
           hero {
@@ -36,21 +36,29 @@ def test_hero_name_and_friends_query():
     '''
     expected = {
         'hero': {
-            'id': '2001',
-            'name': 'R2-D2',
+            'id':
+            '2001',
+            'name':
+            'R2-D2',
             'friends': [
-                {'name': 'Luke Skywalker'},
-                {'name': 'Han Solo'},
-                {'name': 'Leia Organa'},
+                {
+                    'name': 'Luke Skywalker'
+                },
+                {
+                    'name': 'Han Solo'
+                },
+                {
+                    'name': 'Leia Organa'
+                },
             ]
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert result.data == expected
 
 
-def test_nested_query():
+async def test_nested_query():
     query = '''
         query NestedQuery {
           hero {
@@ -67,10 +75,12 @@ def test_nested_query():
     '''
     expected = {
         'hero': {
-            'name': 'R2-D2',
+            'name':
+            'R2-D2',
             'friends': [
                 {
-                    'name': 'Luke Skywalker',
+                    'name':
+                    'Luke Skywalker',
                     'appearsIn': ['NEWHOPE', 'EMPIRE', 'JEDI'],
                     'friends': [
                         {
@@ -88,7 +98,8 @@ def test_nested_query():
                     ]
                 },
                 {
-                    'name': 'Han Solo',
+                    'name':
+                    'Han Solo',
                     'appearsIn': ['NEWHOPE', 'EMPIRE', 'JEDI'],
                     'friends': [
                         {
@@ -103,7 +114,8 @@ def test_nested_query():
                     ]
                 },
                 {
-                    'name': 'Leia Organa',
+                    'name':
+                    'Leia Organa',
                     'appearsIn': ['NEWHOPE', 'EMPIRE', 'JEDI'],
                     'friends': [
                         {
@@ -123,12 +135,12 @@ def test_nested_query():
             ]
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert result.data == expected
 
 
-def test_fetch_luke_query():
+async def test_fetch_luke_query():
     query = '''
         query FetchLukeQuery {
           human(id: "1000") {
@@ -141,12 +153,12 @@ def test_fetch_luke_query():
             'name': 'Luke Skywalker',
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert result.data == expected
 
 
-def test_fetch_some_id_query():
+async def test_fetch_some_id_query():
     query = '''
         query FetchSomeIDQuery($someId: String!) {
           human(id: $someId) {
@@ -162,12 +174,12 @@ def test_fetch_some_id_query():
             'name': 'Luke Skywalker',
         }
     }
-    result = graphql(StarWarsSchema, query, variable_values=params)
+    result = await graphql(StarWarsSchema, query, variable_values=params)
     assert not result.errors
     assert result.data == expected
 
 
-def test_fetch_some_id_query2():
+async def test_fetch_some_id_query2():
     query = '''
         query FetchSomeIDQuery($someId: String!) {
           human(id: $someId) {
@@ -183,12 +195,12 @@ def test_fetch_some_id_query2():
             'name': 'Han Solo',
         }
     }
-    result = graphql(StarWarsSchema, query, variable_values=params)
+    result = await graphql(StarWarsSchema, query, variable_values=params)
     assert not result.errors
     assert result.data == expected
 
 
-def test_invalid_id_query():
+async def test_invalid_id_query():
     query = '''
         query humanQuery($id: String!) {
           human(id: $id) {
@@ -199,15 +211,13 @@ def test_invalid_id_query():
     params = {
         'id': 'not a valid id',
     }
-    expected = {
-        'human': None
-    }
-    result = graphql(StarWarsSchema, query, variable_values=params)
+    expected = {'human': None}
+    result = await graphql(StarWarsSchema, query, variable_values=params)
     assert not result.errors
     assert result.data == expected
 
 
-def test_fetch_luke_aliased():
+async def test_fetch_luke_aliased():
     query = '''
         query FetchLukeAliased {
           luke: human(id: "1000") {
@@ -220,12 +230,12 @@ def test_fetch_luke_aliased():
             'name': 'Luke Skywalker',
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert result.data == expected
 
 
-def test_fetch_luke_and_leia_aliased():
+async def test_fetch_luke_and_leia_aliased():
     query = '''
         query FetchLukeAndLeiaAliased {
           luke: human(id: "1000") {
@@ -244,12 +254,12 @@ def test_fetch_luke_and_leia_aliased():
             'name': 'Leia Organa',
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert result.data == expected
 
 
-def test_duplicate_fields():
+async def test_duplicate_fields():
     query = '''
         query DuplicateFields {
           luke: human(id: "1000") {
@@ -272,12 +282,12 @@ def test_duplicate_fields():
             'homePlanet': 'Alderaan',
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert result.data == expected
 
 
-def test_use_fragment():
+async def test_use_fragment():
     query = '''
         query UseFragment {
           luke: human(id: "1000") {
@@ -302,12 +312,12 @@ def test_use_fragment():
             'homePlanet': 'Alderaan',
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert result.data == expected
 
 
-def test_check_type_of_r2():
+async def test_check_type_of_r2():
     query = '''
         query CheckTypeOfR2 {
           hero {
@@ -322,12 +332,12 @@ def test_check_type_of_r2():
             'name': 'R2-D2',
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert result.data == expected
 
 
-def test_check_type_of_luke():
+async def test_check_type_of_luke():
     query = '''
         query CheckTypeOfLuke {
           hero(episode: EMPIRE) {
@@ -342,18 +352,19 @@ def test_check_type_of_luke():
             'name': 'Luke Skywalker',
         }
     }
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert not result.errors
     assert result.data == expected
 
 
-def test_parse_error():
+async def test_parse_error():
     query = '''
         qeury
     '''
-    result = graphql(StarWarsSchema, query)
+    result = await graphql(StarWarsSchema, query)
     assert result.invalid
     formatted_error = format_error(result.errors[0])
     assert formatted_error['locations'] == [{'column': 9, 'line': 2}]
-    assert 'Syntax Error GraphQL request (2:9) Unexpected Name "qeury"' in formatted_error['message']
+    assert 'Syntax Error GraphQL request (2:9) Unexpected Name "qeury"' in formatted_error[
+        'message']
     assert result.data is None
