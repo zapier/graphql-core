@@ -1,3 +1,4 @@
+import pytest
 import json
 from collections import OrderedDict
 
@@ -18,6 +19,9 @@ def _test_schema(test_field):
             }
         )
     )
+
+
+pytestmark = pytest.mark.asyncio
 
 
 async def test_default_function_accesses_properties():

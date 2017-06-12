@@ -13,6 +13,9 @@ from graphql.type import (
 )
 
 
+pytestmark = pytest.mark.asyncio
+
+
 async def test_asyncio_py35_executor():
     ast = parse('query Example { a, b, c }')
 

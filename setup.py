@@ -18,21 +18,19 @@ if 'test' not in sys.argv:
 
 version = __import__('graphql').get_version()
 
-install_requires = [
-    'six>=1.10.0',
-    'promise>=2.0'
-]
+install_requires = ['six>=1.10.0', 'promise>=2.0']
 
 tests_requires = [
     'pytest>=3.0.2',
-    'pytest-django==2.9.1',
     'pytest-cov==2.3.1',
     'coveralls',
     'six>=1.10.0',
     'pytest-benchmark==3.0.0',
     'pytest-mock==1.2',
     'pytest-asyncio',
+    'aiodataloader',
 ]
+
 
 class PyTest(TestCommand):
     def finalize_options(self):
@@ -54,7 +52,8 @@ setup(
     url='https://github.com/graphql-python/graphql-core',
     download_url='https://github.com/graphql-python/graphql-core/releases',
     author='Syrus Akbary, Jake Heinz, Taeho Kim',
-    author_email='Syrus Akbary <me@syrusakbary.com>, Jake Heinz <me@jh.gg>, Taeho Kim <dittos@gmail.com>',
+    author_email=
+    'Syrus Akbary <me@syrusakbary.com>, Jake Heinz <me@jh.gg>, Taeho Kim <dittos@gmail.com>',
     license='MIT',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
@@ -71,13 +70,9 @@ setup(
         'Topic :: Database :: Front-Ends',
         'Topic :: Internet :: WWW/HTTP',
     ],
-
     keywords='api graphql protocol rest',
     packages=find_packages(exclude=['tests', 'tests_py35']),
     install_requires=install_requires,
     tests_require=tests_requires,
-    cmdclass = {'test': PyTest},
-    extras_require={
-        'test': tests_requires
-    }
-)
+    cmdclass={'test': PyTest},
+    extras_require={'test': tests_requires})

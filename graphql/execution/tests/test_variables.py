@@ -1,6 +1,7 @@
 import json
 from collections import OrderedDict
 
+import pytest
 from pytest import raises
 
 from graphql.error import GraphQLError, format_error
@@ -26,6 +27,9 @@ TestInputObject = GraphQLInputObjectType('TestInputObject', OrderedDict([
 ]))
 
 stringify = lambda obj: json.dumps(obj, sort_keys=True)
+
+
+pytestmark = pytest.mark.asyncio
 
 
 def input_to_json(obj, args, context, info):
