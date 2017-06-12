@@ -21,7 +21,8 @@ class ExecutionContext(object):
     __slots__ = 'schema', 'fragments', 'root_value', 'operation', 'variable_values', 'errors', 'context_value', \
                 'argument_values_cache', 'executor', 'middleware', '_subfields_cache'
 
-    def __init__(self, schema, document_ast, root_value, context_value, variable_values, operation_name, executor, middleware):
+    def __init__(self, schema, document_ast, root_value, context_value,
+                 variable_values, operation_name, executor, middleware):
         """Constructs a ExecutionContext object from the arguments passed
         to execute, which we will pass throughout the other execution
         methods."""
@@ -32,7 +33,9 @@ class ExecutionContext(object):
         for definition in document_ast.definitions:
             if isinstance(definition, ast.OperationDefinition):
                 if not operation_name and operation:
-                    raise GraphQLError('Must provide operation name if query contains multiple operations.')
+                    raise GraphQLError(
+                        'Must provide operation name if query contains multiple operations.'
+                    )
 
                 if not operation_name or definition.name and definition.name.value == operation_name:
                     operation = definition
@@ -42,18 +45,19 @@ class ExecutionContext(object):
 
             else:
                 raise GraphQLError(
-                    u'GraphQL cannot execute a request containing a {}.'.format(definition.__class__.__name__),
-                    definition
-                )
+                    u'GraphQL cannot execute a request containing a {}.'.
+                    format(definition.__class__.__name__), definition)
 
         if not operation:
             if operation_name:
-                raise GraphQLError(u'Unknown operation named "{}".'.format(operation_name))
+                raise GraphQLError(
+                    u'Unknown operation named "{}".'.format(operation_name))
 
             else:
                 raise GraphQLError('Must provide an operation.')
 
-        variable_values = get_variable_values(schema, operation.variable_definitions or [], variable_values)
+        variable_values = get_variable_values(
+            schema, operation.variable_definitions or [], variable_values)
 
         self.schema = schema
         self.fragments = fragments
@@ -77,8 +81,8 @@ class ExecutionContext(object):
         result = self.argument_values_cache.get(k)
 
         if not result:
-            result = self.argument_values_cache[k] = get_argument_values(field_def.args, field_ast.arguments,
-                                                                         self.variable_values)
+            result = self.argument_values_cache[k] = get_argument_values(
+                field_def.args, field_ast.arguments, self.variable_values)
 
         return result
 
@@ -91,9 +95,8 @@ class ExecutionContext(object):
                 selection_set = field_ast.selection_set
                 if selection_set:
                     subfield_asts = collect_fields(
-                        self, return_type, selection_set,
-                        subfield_asts, visited_fragment_names
-                    )
+                        self, return_type, selection_set, subfield_asts,
+                        visited_fragment_names)
             self._subfields_cache[k] = subfield_asts
         return self._subfields_cache[k]
 
@@ -115,14 +118,10 @@ class ExecutionResult(object):
         self.invalid = invalid
 
     def __eq__(self, other):
-        return (
-            self is other or (
-                isinstance(other, ExecutionResult) and
-                self.data == other.data and
-                self.errors == other.errors and
-                self.invalid == other.invalid
-            )
-        )
+        return (self is other or
+                (isinstance(other, ExecutionResult) and
+                 self.data == other.data and self.errors == other.errors and
+                 self.invalid == other.invalid))
 
 
 def get_operation_root_type(schema, operation):
@@ -134,10 +133,8 @@ def get_operation_root_type(schema, operation):
         mutation_type = schema.get_mutation_type()
 
         if not mutation_type:
-            raise GraphQLError(
-                'Schema is not configured for mutations',
-                [operation]
-            )
+            raise GraphQLError('Schema is not configured for mutations',
+                               [operation])
 
         return mutation_type
 
@@ -145,20 +142,17 @@ def get_operation_root_type(schema, operation):
         subscription_type = schema.get_subscription_type()
 
         if not subscription_type:
-            raise GraphQLError(
-                'Schema is not configured for subscriptions',
-                [operation]
-            )
+            raise GraphQLError('Schema is not configured for subscriptions',
+                               [operation])
 
         return subscription_type
 
-    raise GraphQLError(
-        'Can only execute queries, mutations and subscriptions',
-        [operation]
-    )
+    raise GraphQLError('Can only execute queries, mutations and subscriptions',
+                       [operation])
 
 
-def collect_fields(ctx, runtime_type, selection_set, fields, prev_fragment_names):
+def collect_fields(ctx, runtime_type, selection_set, fields,
+                   prev_fragment_names):
     """
     Given a selectionSet, adds all of the fields in that selection to
     the passed in map of fields, and returns it at the end.
@@ -180,15 +174,17 @@ def collect_fields(ctx, runtime_type, selection_set, fields, prev_fragment_names
         elif isinstance(selection, ast.InlineFragment):
             if not should_include_node(
                     ctx, directives) or not does_fragment_condition_match(
-                    ctx, selection, runtime_type):
+                        ctx, selection, runtime_type):
                 continue
 
-            collect_fields(ctx, runtime_type, selection.selection_set, fields, prev_fragment_names)
+            collect_fields(ctx, runtime_type, selection.selection_set, fields,
+                           prev_fragment_names)
 
         elif isinstance(selection, ast.FragmentSpread):
             frag_name = selection.name.value
 
-            if frag_name in prev_fragment_names or not should_include_node(ctx, directives):
+            if frag_name in prev_fragment_names or not should_include_node(
+                    ctx, directives):
                 continue
 
             prev_fragment_names.add(frag_name)
@@ -199,7 +195,8 @@ def collect_fields(ctx, runtime_type, selection_set, fields, prev_fragment_names
                     does_fragment_condition_match(ctx, fragment, runtime_type):
                 continue
 
-            collect_fields(ctx, runtime_type, fragment.selection_set, fields, prev_fragment_names)
+            collect_fields(ctx, runtime_type, fragment.selection_set, fields,
+                           prev_fragment_names)
 
     return fields
 
@@ -220,8 +217,7 @@ def should_include_node(ctx, directives):
             args = get_argument_values(
                 GraphQLSkipDirective.args,
                 skip_ast.arguments,
-                ctx.variable_values,
-            )
+                ctx.variable_values, )
             if args.get('if') is True:
                 return False
 
@@ -236,8 +232,7 @@ def should_include_node(ctx, directives):
             args = get_argument_values(
                 GraphQLIncludeDirective.args,
                 include_ast.arguments,
-                ctx.variable_values,
-            )
+                ctx.variable_values, )
 
             if args.get('if') is False:
                 return False
@@ -269,7 +264,8 @@ def get_field_entry_key(node):
 
 class ResolveInfo(object):
     __slots__ = ('field_name', 'field_asts', 'return_type', 'parent_type',
-                 'schema', 'fragments', 'root_value', 'operation', 'variable_values')
+                 'schema', 'fragments', 'root_value', 'operation',
+                 'variable_values')
 
     def __init__(self, field_name, field_asts, return_type, parent_type,
                  schema, fragments, root_value, operation, variable_values):

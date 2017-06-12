@@ -1,3 +1,4 @@
+import pytest
 from collections import namedtuple
 
 from graphql.error import format_error
@@ -6,10 +7,20 @@ from graphql.language.parser import parse
 from graphql.type import (GraphQLField, GraphQLInt, GraphQLList,
                           GraphQLNonNull, GraphQLObjectType, GraphQLSchema)
 
-from .utils import rejected, resolved
+# from .utils import rejected, resolved
+
+async def resolved(value):
+    return value
+
+async def rejected(e):
+    raise e
+
 
 Data = namedtuple('Data', 'test')
 ast = parse('{ nest { test } }')
+
+
+pytestmark = pytest.mark.asyncio
 
 
 def check(test_data, expected):

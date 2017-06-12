@@ -112,9 +112,6 @@ async def execute_fields(exe_context, parent_type, source_value, fields):
 
     for response_name, field_asts in fields.items():
         result = resolve_field(exe_context, parent_type, source_value, field_asts)
-        if result is Undefined:
-            continue
-
         if iscoroutine(result):
             corroutz.append(result)
             corroutz_name.append(response_name)
@@ -124,10 +121,15 @@ async def execute_fields(exe_context, parent_type, source_value, fields):
     results = await gather(*corroutz, return_exceptions=True)
 
     for i, r in enumerate(results):
+        name = corroutz_name[i]
+        if r is Undefined:
+            del final_results[name]
+            continue
+
         if isinstance(r, Exception):
             raise r
 
-        final_results[corroutz_name[i]] = r
+        final_results[name] = r
 
     return final_results
 
@@ -228,9 +230,11 @@ async def complete_value(exe_context, return_type, field_asts, info, result):
     """
     # If field type is NonNull, complete for inner type, and throw field error if result is null.
     if iscoroutine(result):
-        result = await result
+        try:
+            result = await result
+        except Exception as e:
+            raise GraphQLLocatedError(field_asts, original_error=e)
 
-    # print return_type, type(result)
     if isinstance(result, Exception):
         raise GraphQLLocatedError(field_asts, original_error=result)
 

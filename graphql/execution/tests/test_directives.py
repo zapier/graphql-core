@@ -1,7 +1,13 @@
+import pytest
+
 from graphql.execution import execute
 from graphql.language.parser import parse
 from graphql.type import (GraphQLField, GraphQLObjectType, GraphQLSchema,
                           GraphQLString)
+
+
+pytestmark = pytest.mark.asyncio
+
 
 schema = GraphQLSchema(
     query=GraphQLObjectType(
@@ -20,7 +26,7 @@ class Data(object):
 
 
 async def execute_test_query(doc):
-    return execute(schema, parse(doc), Data)
+    return await execute(schema, parse(doc), Data)
 
 
 async def test_basic_query_works():

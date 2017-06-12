@@ -1,8 +1,12 @@
+import pytest
 from graphql.execution import execute
 from graphql.language.parser import parse
 from graphql.type import (GraphQLBoolean, GraphQLField, GraphQLInterfaceType,
                           GraphQLList, GraphQLObjectType, GraphQLSchema,
                           GraphQLString, GraphQLUnionType)
+
+
+pytestmark = pytest.mark.asyncio
 
 
 class Dog(object):

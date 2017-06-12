@@ -1,3 +1,4 @@
+import pytest
 import json
 from collections import OrderedDict
 
@@ -15,10 +16,13 @@ from graphql.validation.rules import ProvidedNonNullArguments
 from ...pyutils.contain_subset import contain_subset
 
 
-def test_executes_an_introspection_query():
+pytestmark = pytest.mark.asyncio
+
+
+async def test_executes_an_introspection_query():
     EmptySchema = GraphQLSchema(GraphQLObjectType('QueryRoot', {'f': GraphQLField(GraphQLString)}))
 
-    result = graphql(EmptySchema, introspection_query)
+    result = await graphql(EmptySchema, introspection_query)
     assert not result.errors
     expected = {
         "__schema": {
@@ -719,7 +723,7 @@ def test_executes_an_introspection_query():
     assert contain_subset(expected, result.data)
 
 
-def test_introspects_on_input_object():
+async def test_introspects_on_input_object():
     TestInputObject = GraphQLInputObjectType('TestInputObject', OrderedDict([
         ('a', GraphQLInputObjectField(GraphQLString, default_value='foo')),
         ('b', GraphQLInputObjectField(GraphQLList(GraphQLString)))
@@ -763,7 +767,7 @@ def test_introspects_on_input_object():
         }
       }
     '''
-    result = graphql(schema, request)
+    result = await graphql(schema, request)
     assert not result.errors
     assert {'kind': 'INPUT_OBJECT',
             'name': 'TestInputObject',
@@ -785,18 +789,18 @@ def test_introspects_on_input_object():
                   'defaultValue': None}]} in result.data['__schema']['types']
 
 
-def test_supports_the_type_root_field():
+async def test_supports_the_type_root_field():
     TestType = GraphQLObjectType('TestType', {
         'testField': GraphQLField(GraphQLString)
     })
     schema = GraphQLSchema(TestType)
     request = '{ __type(name: "TestType") { name } }'
-    result = graphql(schema, request, object())
+    result = await graphql(schema, request, object())
     assert not result.errors
     assert result.data == {'__type': {'name': 'TestType'}}
 
 
-def test_identifies_deprecated_fields():
+async def test_identifies_deprecated_fields():
     TestType = GraphQLObjectType('TestType', OrderedDict([
         ('nonDeprecated', GraphQLField(GraphQLString)),
         ('deprecated', GraphQLField(GraphQLString, deprecation_reason='Removed in 1.0'))
@@ -810,7 +814,7 @@ def test_identifies_deprecated_fields():
             deprecationReason
         }
     } }'''
-    result = graphql(schema, request)
+    result = await graphql(schema, request)
     assert not result.errors
     assert result.data == {'__type': {
         'name': 'TestType',
@@ -822,7 +826,7 @@ def test_identifies_deprecated_fields():
     }}
 
 
-def test_respects_the_includedeprecated_parameter_for_fields():
+async def test_respects_the_includedeprecated_parameter_for_fields():
     TestType = GraphQLObjectType('TestType', OrderedDict([
         ('nonDeprecated', GraphQLField(GraphQLString)),
         ('deprecated', GraphQLField(GraphQLString, deprecation_reason='Removed in 1.0'))
@@ -834,7 +838,7 @@ def test_respects_the_includedeprecated_parameter_for_fields():
         falseFields: fields(includeDeprecated: false) { name }
         omittedFields: fields { name }
     } }'''
-    result = graphql(schema, request)
+    result = await graphql(schema, request)
     assert not result.errors
     assert result.data == {'__type': {
         'name': 'TestType',
@@ -844,7 +848,7 @@ def test_respects_the_includedeprecated_parameter_for_fields():
     }}
 
 
-def test_identifies_deprecated_enum_values():
+async def test_identifies_deprecated_enum_values():
     TestEnum = GraphQLEnumType('TestEnum', OrderedDict([
         ('NONDEPRECATED', GraphQLEnumValue(0)),
         ('DEPRECATED', GraphQLEnumValue(1, deprecation_reason='Removed in 1.0')),
@@ -862,7 +866,7 @@ def test_identifies_deprecated_enum_values():
             deprecationReason
         }
     } }'''
-    result = graphql(schema, request)
+    result = await graphql(schema, request)
     assert not result.errors
     assert result.data == {'__type': {
         'name': 'TestEnum',
@@ -873,7 +877,7 @@ def test_identifies_deprecated_enum_values():
         ]}}
 
 
-def test_respects_the_includedeprecated_parameter_for_enum_values():
+async def test_respects_the_includedeprecated_parameter_for_enum_values():
     TestEnum = GraphQLEnumType('TestEnum', OrderedDict([
         ('NONDEPRECATED', GraphQLEnumValue(0)),
         ('DEPRECATED', GraphQLEnumValue(1, deprecation_reason='Removed in 1.0')),
@@ -889,7 +893,7 @@ def test_respects_the_includedeprecated_parameter_for_enum_values():
         falseValues: enumValues(includeDeprecated: false) { name }
         omittedValues: enumValues { name }
     } }'''
-    result = graphql(schema, request)
+    result = await graphql(schema, request)
     assert not result.errors
     assert result.data == {'__type': {
         'name': 'TestEnum',
@@ -902,7 +906,7 @@ def test_respects_the_includedeprecated_parameter_for_enum_values():
     }}
 
 
-def test_fails_as_expected_on_the_type_root_field_without_an_arg():
+async def test_fails_as_expected_on_the_type_root_field_without_an_arg():
     TestType = GraphQLObjectType('TestType', {
         'testField': GraphQLField(GraphQLString)
     })
@@ -913,13 +917,13 @@ def test_fails_as_expected_on_the_type_root_field_without_an_arg():
            name
         }
     }'''
-    result = graphql(schema, request)
+    result = await graphql(schema, request)
     expected_error = {'message': ProvidedNonNullArguments.missing_field_arg_message('__type', 'name', 'String!'),
                       'locations': [dict(line=3, column=9)]}
     assert (expected_error in [format_error(error) for error in result.errors])
 
 
-def test_exposes_descriptions_on_types_and_fields():
+async def test_exposes_descriptions_on_types_and_fields():
     QueryRoot = GraphQLObjectType('QueryRoot', {'f': GraphQLField(GraphQLString)})
     schema = GraphQLSchema(QueryRoot)
     request = '''{
@@ -933,7 +937,7 @@ def test_exposes_descriptions_on_types_and_fields():
         }
       }
     '''
-    result = graphql(schema, request)
+    result = await graphql(schema, request)
     assert not result.errors
     assert result.data == {'schemaType': {
         'name': '__Schema',
@@ -968,7 +972,7 @@ def test_exposes_descriptions_on_types_and_fields():
     }}
 
 
-def test_exposes_descriptions_on_enums():
+async def test_exposes_descriptions_on_enums():
     QueryRoot = GraphQLObjectType('QueryRoot', {'f': GraphQLField(GraphQLString)})
     schema = GraphQLSchema(QueryRoot)
     request = '''{
@@ -982,7 +986,7 @@ def test_exposes_descriptions_on_enums():
         }
       }
     '''
-    result = graphql(schema, request)
+    result = await graphql(schema, request)
     assert not result.errors
     assert result.data == {'typeKindType': {
         'name': '__TypeKind',

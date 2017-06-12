@@ -1,26 +1,26 @@
+import pytest
 from graphql import graphql
 from graphql.type import GraphQLBoolean, GraphQLSchema, GraphQLString
 from graphql.type.definition import (GraphQLField, GraphQLInterfaceType,
                                      GraphQLList, GraphQLObjectType,
                                      GraphQLUnionType)
 
+pytestmark = pytest.mark.asyncio
+
 
 class Dog(object):
-
     def __init__(self, name, woofs):
         self.name = name
         self.woofs = woofs
 
 
 class Cat(object):
-
     def __init__(self, name, meows):
         self.name = name
         self.meows = meows
 
 
 class Human(object):
-
     def __init__(self, name):
         self.name = name
 
@@ -44,13 +44,9 @@ def make_type_resolver(types):
     return resolve_type
 
 
-def test_is_type_of_used_to_resolve_runtime_type_for_interface():
+async def test_is_type_of_used_to_resolve_runtime_type_for_interface():
     PetType = GraphQLInterfaceType(
-        name='Pet',
-        fields={
-            'name': GraphQLField(GraphQLString)
-        }
-    )
+        name='Pet', fields={'name': GraphQLField(GraphQLString)})
 
     DogType = GraphQLObjectType(
         name='Dog',
@@ -59,8 +55,7 @@ def test_is_type_of_used_to_resolve_runtime_type_for_interface():
         fields={
             'name': GraphQLField(GraphQLString),
             'woofs': GraphQLField(GraphQLBoolean)
-        }
-    )
+        })
 
     CatType = GraphQLObjectType(
         name='Cat',
@@ -69,8 +64,7 @@ def test_is_type_of_used_to_resolve_runtime_type_for_interface():
         fields={
             'name': GraphQLField(GraphQLString),
             'meows': GraphQLField(GraphQLBoolean)
-        }
-    )
+        })
 
     schema = GraphQLSchema(
         query=GraphQLObjectType(
@@ -99,20 +93,27 @@ def test_is_type_of_used_to_resolve_runtime_type_for_interface():
     }
     '''
 
-    result = graphql(schema, query)
+    result = await graphql(schema, query)
     assert not result.errors
-    assert result.data == {'pets': [{'woofs': True, 'name': 'Odie'}, {'name': 'Garfield', 'meows': False}]}
+    assert result.data == {
+        'pets': [{
+            'woofs': True,
+            'name': 'Odie'
+        }, {
+            'name': 'Garfield',
+            'meows': False
+        }]
+    }
 
 
-def test_is_type_of_used_to_resolve_runtime_type_for_union():
+async def test_is_type_of_used_to_resolve_runtime_type_for_union():
     DogType = GraphQLObjectType(
         name='Dog',
         is_type_of=is_type_of(Dog),
         fields={
             'name': GraphQLField(GraphQLString),
             'woofs': GraphQLField(GraphQLBoolean)
-        }
-    )
+        })
 
     CatType = GraphQLObjectType(
         name='Cat',
@@ -120,13 +121,9 @@ def test_is_type_of_used_to_resolve_runtime_type_for_union():
         fields={
             'name': GraphQLField(GraphQLString),
             'meows': GraphQLField(GraphQLBoolean)
-        }
-    )
+        })
 
-    PetType = GraphQLUnionType(
-        name='Pet',
-        types=[CatType, DogType]
-    )
+    PetType = GraphQLUnionType(name='Pet', types=[CatType, DogType])
 
     schema = GraphQLSchema(
         query=GraphQLObjectType(
@@ -156,23 +153,25 @@ def test_is_type_of_used_to_resolve_runtime_type_for_union():
     }
     '''
 
-    result = graphql(schema, query)
+    result = await graphql(schema, query)
     assert not result.errors
-    assert result.data == {'pets': [{'woofs': True, 'name': 'Odie'}, {'name': 'Garfield', 'meows': False}]}
+    assert result.data == {
+        'pets': [{
+            'woofs': True,
+            'name': 'Odie'
+        }, {
+            'name': 'Garfield',
+            'meows': False
+        }]
+    }
 
 
-def test_resolve_type_on_interface_yields_useful_error():
+async def test_resolve_type_on_interface_yields_useful_error():
     PetType = GraphQLInterfaceType(
         name='Pet',
-        fields={
-            'name': GraphQLField(GraphQLString)
-        },
-        resolve_type=make_type_resolver(lambda: [
-            (Dog, DogType),
-            (Cat, CatType),
-            (Human, HumanType)
-        ])
-    )
+        fields={'name': GraphQLField(GraphQLString)},
+        resolve_type=make_type_resolver(
+            lambda: [(Dog, DogType), (Cat, CatType), (Human, HumanType)]))
 
     DogType = GraphQLObjectType(
         name='Dog',
@@ -180,15 +179,12 @@ def test_resolve_type_on_interface_yields_useful_error():
         fields={
             'name': GraphQLField(GraphQLString),
             'woofs': GraphQLField(GraphQLBoolean)
-        }
-    )
+        })
 
     HumanType = GraphQLObjectType(
-        name='Human',
-        fields={
+        name='Human', fields={
             'name': GraphQLField(GraphQLString),
-        }
-    )
+        })
 
     CatType = GraphQLObjectType(
         name='Cat',
@@ -196,8 +192,7 @@ def test_resolve_type_on_interface_yields_useful_error():
         fields={
             'name': GraphQLField(GraphQLString),
             'meows': GraphQLField(GraphQLBoolean)
-        }
-    )
+        })
 
     schema = GraphQLSchema(
         query=GraphQLObjectType(
@@ -226,44 +221,45 @@ def test_resolve_type_on_interface_yields_useful_error():
     }
     '''
 
-    result = graphql(schema, query)
-    assert result.errors[0].message == 'Runtime Object type "Human" is not a possible type for "Pet".'
-    assert result.data == {'pets': [{'woofs': True, 'name': 'Odie'}, {'name': 'Garfield', 'meows': False}, None]}
+    result = await graphql(schema, query)
+    assert result.errors[
+        0].message == 'Runtime Object type "Human" is not a possible type for "Pet".'
+    assert result.data == {
+        'pets': [{
+            'woofs': True,
+            'name': 'Odie'
+        }, {
+            'name': 'Garfield',
+            'meows': False
+        }, None]
+    }
 
 
-def test_resolve_type_on_union_yields_useful_error():
+async def test_resolve_type_on_union_yields_useful_error():
     DogType = GraphQLObjectType(
         name='Dog',
         fields={
             'name': GraphQLField(GraphQLString),
             'woofs': GraphQLField(GraphQLBoolean)
-        }
-    )
+        })
 
     HumanType = GraphQLObjectType(
-        name='Human',
-        fields={
+        name='Human', fields={
             'name': GraphQLField(GraphQLString),
-        }
-    )
+        })
 
     CatType = GraphQLObjectType(
         name='Cat',
         fields={
             'name': GraphQLField(GraphQLString),
             'meows': GraphQLField(GraphQLBoolean)
-        }
-    )
+        })
 
     PetType = GraphQLUnionType(
         name='Pet',
         types=[DogType, CatType],
-        resolve_type=make_type_resolver(lambda: [
-            (Dog, DogType),
-            (Cat, CatType),
-            (Human, HumanType)
-        ])
-    )
+        resolve_type=make_type_resolver(
+            lambda: [(Dog, DogType), (Cat, CatType), (Human, HumanType)]))
 
     schema = GraphQLSchema(
         query=GraphQLObjectType(
@@ -292,13 +288,21 @@ def test_resolve_type_on_union_yields_useful_error():
     }
     '''
 
-    result = graphql(schema, query)
-    assert result.errors[0].message == 'Runtime Object type "Human" is not a possible type for "Pet".'
-    assert result.data == {'pets': [{'woofs': True, 'name': 'Odie'}, {'name': 'Garfield', 'meows': False}, None]}
+    result = await graphql(schema, query)
+    assert result.errors[
+        0].message == 'Runtime Object type "Human" is not a possible type for "Pet".'
+    assert result.data == {
+        'pets': [{
+            'woofs': True,
+            'name': 'Odie'
+        }, {
+            'name': 'Garfield',
+            'meows': False
+        }, None]
+    }
 
 
-def test_resolve_type_can_use_type_string():
-
+async def test_resolve_type_can_use_type_string():
     def type_string_resolver(obj, *_):
         if isinstance(obj, Dog):
             return 'Dog'
@@ -307,11 +311,8 @@ def test_resolve_type_can_use_type_string():
 
     PetType = GraphQLInterfaceType(
         name='Pet',
-        fields={
-            'name': GraphQLField(GraphQLString)
-        },
-        resolve_type=type_string_resolver
-    )
+        fields={'name': GraphQLField(GraphQLString)},
+        resolve_type=type_string_resolver)
 
     DogType = GraphQLObjectType(
         name='Dog',
@@ -319,8 +320,7 @@ def test_resolve_type_can_use_type_string():
         fields={
             'name': GraphQLField(GraphQLString),
             'woofs': GraphQLField(GraphQLBoolean)
-        }
-    )
+        })
 
     CatType = GraphQLObjectType(
         name='Cat',
@@ -328,8 +328,7 @@ def test_resolve_type_can_use_type_string():
         fields={
             'name': GraphQLField(GraphQLString),
             'meows': GraphQLField(GraphQLBoolean)
-        }
-    )
+        })
 
     schema = GraphQLSchema(
         query=GraphQLObjectType(
@@ -358,6 +357,14 @@ def test_resolve_type_can_use_type_string():
     }
     '''
 
-    result = graphql(schema, query)
+    result = await graphql(schema, query)
     assert not result.errors
-    assert result.data == {'pets': [{'woofs': True, 'name': 'Odie'}, {'name': 'Garfield', 'meows': False}]}
+    assert result.data == {
+        'pets': [{
+            'woofs': True,
+            'name': 'Odie'
+        }, {
+            'name': 'Garfield',
+            'meows': False
+        }]
+    }

@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+import pytest
 from pytest import raises
 
 from graphql import graphql
@@ -18,16 +19,19 @@ from graphql.utils.introspection_query import introspection_query
 from ...pyutils.contain_subset import contain_subset
 
 
-def _test_schema(server_schema):
-    initial_introspection = graphql(server_schema, introspection_query)
+pytestmark = pytest.mark.asyncio
+
+
+async def _test_schema(server_schema):
+    initial_introspection = await graphql(server_schema, introspection_query)
     client_schema = build_client_schema(initial_introspection.data)
-    second_introspection = graphql(client_schema, introspection_query)
+    second_introspection = await graphql(client_schema, introspection_query)
     assert contain_subset(initial_introspection.data, second_introspection.data)
 
     return client_schema
 
 
-def test_it_builds_a_simple_schema():
+async def test_it_builds_a_simple_schema():
     schema = GraphQLSchema(
         query=GraphQLObjectType(
             name='Simple',
@@ -37,10 +41,10 @@ def test_it_builds_a_simple_schema():
             }
         )
     )
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_builds_a_simple_schema_with_both_operation_types():
+async def test_builds_a_simple_schema_with_both_operation_types():
     QueryType = GraphQLObjectType(
         name='QueryType',
         description='This is a simple query type',
@@ -69,10 +73,10 @@ def test_builds_a_simple_schema_with_both_operation_types():
     )
 
     schema = GraphQLSchema(QueryType, MutationType, SubscriptionType)
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_uses_built_in_scalars_when_possible():
+async def test_uses_built_in_scalars_when_possible():
     customScalar = GraphQLScalarType(
         name='CustomScalar',
         serialize=lambda: None
@@ -92,7 +96,7 @@ def test_uses_built_in_scalars_when_possible():
         )
     )
 
-    client_schema = _test_schema(schema)
+    client_schema = await _test_schema(schema)
 
     assert client_schema.get_type('Int') == GraphQLInt
     assert client_schema.get_type('Float') == GraphQLFloat
@@ -103,7 +107,7 @@ def test_uses_built_in_scalars_when_possible():
     assert client_schema.get_type('CustomScalar') != customScalar
 
 
-def test_builds_a_schema_with_a_recursive_type_reference():
+async def test_builds_a_schema_with_a_recursive_type_reference():
     recurType = GraphQLObjectType(
         name='Recur',
         fields=lambda: {
@@ -112,10 +116,10 @@ def test_builds_a_schema_with_a_recursive_type_reference():
     )
 
     schema = GraphQLSchema(query=recurType)
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_builds_a_schema_with_a_circular_type_reference():
+async def test_builds_a_schema_with_a_circular_type_reference():
     DogType = GraphQLObjectType(
         name='Dog',
         fields=lambda: {
@@ -138,10 +142,10 @@ def test_builds_a_schema_with_a_circular_type_reference():
         ])
     ))
 
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_builds_a_schema_with_an_interface():
+async def test_builds_a_schema_with_an_interface():
     FriendlyType = GraphQLInterfaceType(
         name='Friendly',
         resolve_type=lambda: None,
@@ -176,10 +180,10 @@ def test_builds_a_schema_with_an_interface():
         types=[DogType, HumanType]
     )
 
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_builds_a_schema_with_an_implicit_interface():
+async def test_builds_a_schema_with_an_implicit_interface():
     FriendlyType = GraphQLInterfaceType(
         name='Friendly',
         resolve_type=lambda: None,
@@ -205,10 +209,10 @@ def test_builds_a_schema_with_an_implicit_interface():
         )
     )
 
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_builds_a_schema_with_a_union():
+async def test_builds_a_schema_with_a_union():
     DogType = GraphQLObjectType(
         name='Dog',
         fields=lambda: {
@@ -238,10 +242,10 @@ def test_builds_a_schema_with_a_union():
         )
     )
 
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_builds_a_schema_with_complex_field_values():
+async def test_builds_a_schema_with_complex_field_values():
     schema = GraphQLSchema(
         query=GraphQLObjectType(
             name='ComplexFields',
@@ -257,10 +261,10 @@ def test_builds_a_schema_with_complex_field_values():
         )
     )
 
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_builds_a_schema_with_field_arguments():
+async def test_builds_a_schema_with_field_arguments():
     schema = GraphQLSchema(
         query=GraphQLObjectType(
             name='ArgFields',
@@ -282,10 +286,10 @@ def test_builds_a_schema_with_field_arguments():
         )
     )
 
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_builds_a_schema_with_an_enum():
+async def test_builds_a_schema_with_an_enum():
     FoodEnum = GraphQLEnumType(
         name='Food',
         description='Varieties of food stuffs',
@@ -316,7 +320,7 @@ def test_builds_a_schema_with_an_enum():
         )
     )
 
-    client_schema = _test_schema(schema)
+    client_schema = await _test_schema(schema)
     clientFoodEnum = client_schema.get_type('Food')
     assert isinstance(clientFoodEnum, GraphQLEnumType)
 
@@ -330,7 +334,7 @@ def test_builds_a_schema_with_an_enum():
     ]
 
 
-def test_builds_a_schema_with_an_input_object():
+async def test_builds_a_schema_with_an_input_object():
     AddressType = GraphQLInputObjectType(
         name='Address',
         description='An input address',
@@ -362,10 +366,10 @@ def test_builds_a_schema_with_an_input_object():
         )
     )
 
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_builds_a_schema_with_field_arguments_with_default_values():
+async def test_builds_a_schema_with_field_arguments_with_default_values():
     GeoType = GraphQLInputObjectType(
         name='Geo',
         fields=OrderedDict([
@@ -409,10 +413,10 @@ def test_builds_a_schema_with_field_arguments_with_default_values():
         )
     )
 
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_builds_a_schema_with_custom_directives():
+async def test_builds_a_schema_with_custom_directives():
     schema = GraphQLSchema(
         query=GraphQLObjectType(
             name='Simple',
@@ -433,10 +437,10 @@ def test_builds_a_schema_with_custom_directives():
         ]
     )
 
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_builds_a_schema_with_legacy_directives():
+async def test_builds_a_schema_with_legacy_directives():
     old_introspection = {
         "__schema": {
             "queryType": {
@@ -498,12 +502,12 @@ def test_builds_a_schema_with_legacy_directives():
     }
 
     client_schema = build_client_schema(old_introspection)
-    second_introspection = graphql(client_schema, introspection_query).data
+    second_introspection = (await graphql(client_schema, introspection_query)).data
 
     assert contain_subset(new_introspection, second_introspection)
 
 
-def test_builds_a_schema_aware_of_deprecation():
+async def test_builds_a_schema_aware_of_deprecation():
     schema = GraphQLSchema(
         query=GraphQLObjectType(
             name='Simple',
@@ -534,10 +538,10 @@ def test_builds_a_schema_aware_of_deprecation():
         )
     )
 
-    _test_schema(schema)
+    await _test_schema(schema)
 
 
-def test_cannot_use_client_schema_for_general_execution():
+async def test_cannot_use_client_schema_for_general_execution():
     customScalar = GraphQLScalarType(
         name='CustomScalar',
         serialize=lambda: None
@@ -558,13 +562,13 @@ def test_cannot_use_client_schema_for_general_execution():
         )
     )
 
-    introspection = graphql(schema, introspection_query)
+    introspection = await graphql(schema, introspection_query)
     client_schema = build_client_schema(introspection.data)
 
     class data:
         foo = 'bar'
 
-    result = graphql(
+    result = await graphql(
         client_schema,
         'query NoNo($v: CustomScalar) { foo(custom1: 123, custom2: $v) }',
         data,
@@ -577,7 +581,7 @@ def test_cannot_use_client_schema_for_general_execution():
     ]
 
 
-def test_throws_when_given_empty_types():
+async def test_throws_when_given_empty_types():
     incomplete_introspection = {
         '__schema': {
             'queryType': {'name': 'QueryType'},
@@ -592,7 +596,7 @@ def test_throws_when_given_empty_types():
                                  'introspection query is used in order to build a client schema.'
 
 
-def test_throws_when_missing_kind():
+async def test_throws_when_missing_kind():
     incomplete_introspection = {
         '__schema': {
             'queryType': {'name': 'QueryType'},
@@ -609,7 +613,7 @@ def test_throws_when_missing_kind():
                                  'introspection query is used in order to build a client schema.'
 
 
-def test_succeds_on_smaller_equals_than_7_deep_lists():
+async def test_succeds_on_smaller_equals_than_7_deep_lists():
     schema = GraphQLSchema(
         query=GraphQLObjectType(
             name='Query',
@@ -625,11 +629,11 @@ def test_succeds_on_smaller_equals_than_7_deep_lists():
         )
     )
 
-    introspection = graphql(schema, introspection_query)
+    introspection = await graphql(schema, introspection_query)
     build_client_schema(introspection.data)
 
 
-def test_fails_on_very_deep_lists():
+async def test_fails_on_very_deep_lists():
     schema = GraphQLSchema(
         query=GraphQLObjectType(
             name='Query',
@@ -645,7 +649,7 @@ def test_fails_on_very_deep_lists():
         )
     )
 
-    introspection = graphql(schema, introspection_query)
+    introspection = await graphql(schema, introspection_query)
 
     with raises(Exception) as excinfo:
         build_client_schema(introspection.data)
@@ -653,7 +657,7 @@ def test_fails_on_very_deep_lists():
     assert str(excinfo.value) == 'Decorated type deeper than introspection query.'
 
 
-def test_fails_on_a_very_deep_non_null():
+async def test_fails_on_a_very_deep_non_null():
     schema = GraphQLSchema(
         query=GraphQLObjectType(
             name='Query',
@@ -669,7 +673,7 @@ def test_fails_on_a_very_deep_non_null():
         )
     )
 
-    introspection = graphql(schema, introspection_query)
+    introspection = await graphql(schema, introspection_query)
 
     with raises(Exception) as excinfo:
         build_client_schema(introspection.data)

@@ -1,8 +1,13 @@
+import pytest
+
 from graphql.execution import execute
 from graphql.language.parser import parse
 from graphql.type import (GraphQLArgument, GraphQLField, GraphQLInt,
                           GraphQLList, GraphQLObjectType, GraphQLSchema,
                           GraphQLString)
+
+
+pytestmark = pytest.mark.asyncio
 
 
 class NumberHolder(object):
@@ -66,7 +71,7 @@ MutationType = GraphQLObjectType('Mutation', {
 schema = GraphQLSchema(QueryType, MutationType)
 
 
-async def assert_evaluate_mutations_serially(executor=None):
+async def test_evaluates_mutations_serially(executor=None):
     doc = '''mutation M {
       first: immediatelyChangeTheNumber(newNumber: 1) {
         theNumber
@@ -95,10 +100,6 @@ async def assert_evaluate_mutations_serially(executor=None):
             'fourth': {'theNumber': 4},
             'fifth': {'theNumber': 5},
         }
-
-
-def test_evaluates_mutations_serially():
-    assert_evaluate_mutations_serially()
 
 
 async def test_evaluates_mutations_correctly_in_the_presense_of_a_failed_mutation():

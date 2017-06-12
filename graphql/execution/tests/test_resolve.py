@@ -1,7 +1,8 @@
 import json
 from collections import OrderedDict
 
-from graphql import graphql
+from graphql.execution import execute
+from graphql.language.parser import parse
 from graphql.type import (GraphQLArgument, GraphQLField,
                           GraphQLInputObjectField, GraphQLInputObjectType,
                           GraphQLInt, GraphQLList, GraphQLNonNull,
@@ -19,18 +20,18 @@ def _test_schema(test_field):
     )
 
 
-def test_default_function_accesses_properties():
+async def test_default_function_accesses_properties():
     schema = _test_schema(GraphQLField(GraphQLString))
 
     class source:
         test = 'testValue'
 
-    result = graphql(schema, '{ test }', source)
+    result = await execute(schema, parse('{ test }'), source)
     assert not result.errors
     assert result.data == {'test': 'testValue'}
 
 
-def test_default_function_calls_methods():
+async def test_default_function_calls_methods():
     schema = _test_schema(GraphQLField(GraphQLString))
 
     class source:
@@ -39,12 +40,12 @@ def test_default_function_calls_methods():
         def test(self):
             return self._secret
 
-    result = graphql(schema, '{ test }', source())
+    result = await execute(schema, parse('{ test }'), source())
     assert not result.errors
     assert result.data == {'test': 'testValue'}
 
 
-def test_uses_provided_resolve_function():
+async def test_uses_provided_resolve_function():
     def resolver(source, args, *_):
         return json.dumps([source, args], separators=(',', ':'))
 
@@ -57,15 +58,15 @@ def test_uses_provided_resolve_function():
         resolver=resolver
     ))
 
-    result = graphql(schema, '{ test }', None)
+    result = await execute(schema, parse('{ test }'), None)
     assert not result.errors
     assert result.data == {'test': '[null,{}]'}
 
-    result = graphql(schema, '{ test(aStr: "String!") }', 'Source!')
+    result = await execute(schema, parse('{ test(aStr: "String!") }'), 'Source!')
     assert not result.errors
     assert result.data == {'test': '["Source!",{"aStr":"String!"}]'}
 
-    result = graphql(schema, '{ test(aInt: -123, aStr: "String!",) }', 'Source!')
+    result = await execute(schema, parse('{ test(aInt: -123, aStr: "String!",) }'), 'Source!')
     assert not result.errors
     assert result.data in [
         {'test': '["Source!",{"aStr":"String!","aInt":-123}]'},
@@ -73,7 +74,7 @@ def test_uses_provided_resolve_function():
     ]
 
 
-def test_handles_resolved_promises():
+async def test_handles_resolved_promises():
     async def resolver(source, args, *_):
         return 'foo'
 
@@ -82,12 +83,12 @@ def test_handles_resolved_promises():
         resolver=resolver
     ))
 
-    result = graphql(schema, '{ test }', None)
+    result = await execute(schema, parse('{ test }'), None)
     assert not result.errors
     assert result.data == {'test': 'foo'}
 
 
-def test_maps_argument_out_names_well():
+async def test_maps_argument_out_names_well():
     def resolver(source, args, *_):
         return json.dumps([source, args], separators=(',', ':'))
 
@@ -100,15 +101,15 @@ def test_maps_argument_out_names_well():
         resolver=resolver
     ))
 
-    result = graphql(schema, '{ test }', None)
+    result = await execute(schema, parse('{ test }'), None)
     assert not result.errors
     assert result.data == {'test': '[null,{}]'}
 
-    result = graphql(schema, '{ test(aStr: "String!") }', 'Source!')
+    result = await execute(schema, parse('{ test(aStr: "String!") }'), 'Source!')
     assert not result.errors
     assert result.data == {'test': '["Source!",{"a_str":"String!"}]'}
 
-    result = graphql(schema, '{ test(aInt: -123, aStr: "String!",) }', 'Source!')
+    result = await execute(schema, parse('{ test(aInt: -123, aStr: "String!",) }'), 'Source!')
     assert not result.errors
     assert result.data in [
         {'test': '["Source!",{"a_str":"String!","a_int":-123}]'},
@@ -116,7 +117,7 @@ def test_maps_argument_out_names_well():
     ]
 
 
-def test_maps_argument_out_names_well_with_input():
+async def test_maps_argument_out_names_well_with_input():
     def resolver(source, args, *_):
         return json.dumps([source, args], separators=(',', ':'))
 
@@ -134,15 +135,15 @@ def test_maps_argument_out_names_well_with_input():
         resolver=resolver
     ))
 
-    result = graphql(schema, '{ test }', None)
+    result = await execute(schema, parse('{ test }'), None)
     assert not result.errors
     assert result.data == {'test': '[null,{}]'}
 
-    result = graphql(schema, '{ test(aInput: {inputOne: "String!"} ) }', 'Source!')
+    result = await execute(schema, parse('{ test(aInput: {inputOne: "String!"} ) }'), 'Source!')
     assert not result.errors
     assert result.data == {'test': '["Source!",{"a_input":{"input_one":"String!"}}]'}
 
-    result = graphql(schema, '{ test(aInput: {inputRecursive:{inputOne: "SourceRecursive!"}} ) }', 'Source!')
+    result = await execute(schema, parse('{ test(aInput: {inputRecursive:{inputOne: "SourceRecursive!"}} ) }'), 'Source!')
     assert not result.errors
     assert result.data == {
         'test': '["Source!",{"a_input":{"input_recursive":{"input_one":"SourceRecursive!"}}}]'

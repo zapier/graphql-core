@@ -1,5 +1,3 @@
-import asyncio
-
 from .execution import ExecutionResult, execute
 from .language.ast import Document
 from .language.parser import parse
@@ -29,9 +27,9 @@ from .validation import validate
 #    The name of the operation to use if requestString contains multiple
 #    possible operations. Can be omitted if requestString contains only
 #    one operation.
-def graphql(schema, request_string='', root_value=None, context_value=None,
-            variable_values=None, operation_name=None, executor=None,
-            return_promise=False, middleware=None):
+async def graphql(schema, request_string='', root_value=None, context_value=None,
+                  variable_values=None, operation_name=None, executor=None,
+                  return_promise=False, middleware=None):
     try:
         if isinstance(request_string, Document):
             ast = request_string
@@ -44,7 +42,7 @@ def graphql(schema, request_string='', root_value=None, context_value=None,
                 errors=validation_errors,
                 invalid=True,
             )
-        awaited = execute(
+        return await execute(
             schema,
             ast,
             root_value,
@@ -55,8 +53,6 @@ def graphql(schema, request_string='', root_value=None, context_value=None,
             return_promise=return_promise,
             middleware=middleware,
         )
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(awaited)
     except Exception as e:
         return ExecutionResult(
             errors=[e],

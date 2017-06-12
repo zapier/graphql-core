@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from pytest import raises
 
 from graphql.error import GraphQLError
@@ -9,6 +10,9 @@ from graphql.type import (GraphQLArgument, GraphQLBoolean, GraphQLField,
                           GraphQLInt, GraphQLList, GraphQLObjectType,
                           GraphQLSchema, GraphQLString)
 from promise import Promise
+
+
+pytestmark = pytest.mark.asyncio
 
 
 async def test_executes_arbitary_code():
@@ -297,7 +301,7 @@ async def test_raises_if_no_operation_is_provided():
         'a': GraphQLField(GraphQLString)
     })
     with raises(GraphQLError) as excinfo:
-        execute(GraphQLSchema(Type), ast, Data())
+        await execute(GraphQLSchema(Type), ast, Data())
     assert 'Must provide an operation.' == str(excinfo.value)
 
 
@@ -312,7 +316,7 @@ async def test_raises_if_no_operation_name_is_provided_with_multiple_operations(
         'a': GraphQLField(GraphQLString)
     })
     with raises(GraphQLError) as excinfo:
-        execute(GraphQLSchema(Type), ast, Data(), operation_name="UnknownExample")
+        await execute(GraphQLSchema(Type), ast, Data(), operation_name="UnknownExample")
     assert 'Unknown operation named "UnknownExample".' == str(excinfo.value)
 
 
@@ -327,7 +331,7 @@ async def test_raises_if_unknown_operation_name_is_provided():
         'a': GraphQLField(GraphQLString)
     })
     with raises(GraphQLError) as excinfo:
-        execute(GraphQLSchema(Type), ast, Data())
+        await execute(GraphQLSchema(Type), ast, Data())
     assert 'Must provide operation name if query contains multiple operations.' == str(excinfo.value)
 
 
@@ -520,7 +524,7 @@ async def test_fails_to_execute_a_query_containing_a_type_definition():
     )
 
     with raises(GraphQLError) as excinfo:
-        execute(schema, query)
+        await execute(schema, query)
 
     assert excinfo.value.message == 'GraphQL cannot execute a request containing a ObjectTypeDefinition.'
 
@@ -545,7 +549,7 @@ async def test_exceptions_are_reraised_if_specified(mocker):
         )
     )
 
-    execute(schema, query)
+    await execute(schema, query)
     logger.exception.assert_called_with("An error occurred while resolving field Query.foo")
 
 
@@ -572,7 +576,7 @@ async def test_middleware():
 
     def reversed_middleware(next, *args, **kwargs):
         p = next(*args, **kwargs)
-        return p.then(lambda x: x[::-1])
+        return p[::-1]
 
     middlewares = MiddlewareManager(reversed_middleware)
     result = await execute(GraphQLSchema(Type), doc_ast, Data(), middleware=middlewares)
@@ -603,7 +607,7 @@ async def test_middleware_class():
     class MyMiddleware(object):
         def resolve(self, next, *args, **kwargs):
             p = next(*args, **kwargs)
-            return p.then(lambda x: x[::-1])
+            return p[::-1]
 
     middlewares = MiddlewareManager(MyMiddleware())
     result = await execute(GraphQLSchema(Type), doc_ast, Data(), middleware=middlewares)
@@ -632,11 +636,11 @@ async def test_middleware_skip_promise_wrap():
     })
 
     class MyPromiseMiddleware(object):
-        def resolve(self, next, *args, **kwargs):
-            return Promise.resolve(next(*args, **kwargs))
+        async def resolve(self, next, *args, **kwargs):
+            return next(*args, **kwargs)
 
     class MyEmptyMiddleware(object):
-        def resolve(self, next, *args, **kwargs):
+        async def resolve(self, next, *args, **kwargs):
             return next(*args, **kwargs)
 
     middlewares_with_promise = MiddlewareManager(MyPromiseMiddleware(), wrap_in_promise=False)
@@ -644,4 +648,5 @@ async def test_middleware_skip_promise_wrap():
 
     result1 = await execute(GraphQLSchema(Type), doc_ast, Data(), middleware=middlewares_with_promise)
     result2 = await execute(GraphQLSchema(Type), doc_ast, Data(), middleware=middlewares_without_promise)
+    assert not result1.errors
     assert result1.data == result2.data and result1.data == {'ok': 'ok', 'not_ok': 'not_ok'}

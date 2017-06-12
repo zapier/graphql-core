@@ -1,9 +1,13 @@
+import pytest
 
 from graphql.error import format_error
 from graphql.execution import execute
 from graphql.language.parser import parse
 from graphql.type import (GraphQLField, GraphQLNonNull, GraphQLObjectType,
                           GraphQLSchema, GraphQLString)
+
+
+pytestmark = pytest.mark.asyncio
 
 sync_error = Exception('sync')
 non_null_sync_error = Exception('nonNullSync')
