@@ -107,29 +107,14 @@ async def execute_fields_serially(exe_context, parent_type, source_value, fields
 
 async def execute_fields(exe_context, parent_type, source_value, fields):
     final_results = OrderedDict()
-    corroutz = []
-    corroutz_name = []
 
     for response_name, field_asts in fields.items():
-        result = resolve_field(exe_context, parent_type, source_value, field_asts)
-        if iscoroutine(result):
-            corroutz.append(result)
-            corroutz_name.append(response_name)
+        result = await resolve_field(exe_context, parent_type, source_value, field_asts)
 
-        final_results[response_name] = result
-
-    results = await gather(*corroutz, return_exceptions=True)
-
-    for i, r in enumerate(results):
-        name = corroutz_name[i]
-        if r is Undefined:
-            del final_results[name]
+        if result is Undefined:
             continue
 
-        if isinstance(r, Exception):
-            raise r
-
-        final_results[name] = r
+        final_results[response_name] = result
 
     return final_results
 
@@ -208,7 +193,6 @@ async def complete_value_catching_error(exe_context, return_type, field_asts, in
         exe_context.errors.append(e)
         return None
 
-
 async def complete_value(exe_context, return_type, field_asts, info, result):
     """
     Implements the instructions for completeValue as defined in the
@@ -271,22 +255,12 @@ async def complete_list_value(exe_context, return_type, field_asts, info, result
          'for field {}.{}.').format(info.parent_type, info.field_name)
 
     item_type = return_type.of_type
-    completed_results = []
-    corroutz = []
+    results = []
     for item in result:
-        completed_item = complete_value_catching_error(exe_context, item_type, field_asts, info, item)
-        corroutz.append(completed_item)
-
-    if corroutz:
-        results = await gather(*corroutz, return_exceptions=True)
-
-        for r in results:
-            if isinstance(r, Exception):
-                raise r
-
-            completed_results.append(r)
-
-    return completed_results
+        results.append(
+            await complete_value_catching_error(exe_context, item_type, field_asts, info, item)
+        )
+    return results
 
 
 def complete_leaf_value(return_type, result):
@@ -299,7 +273,7 @@ def complete_leaf_value(return_type, result):
     return return_type.serialize(result)
 
 
-async def complete_abstract_value(exe_context, return_type, field_asts, info, result):
+def complete_abstract_value(exe_context, return_type, field_asts, info, result):
     """
     Complete an value of an abstract type by determining the runtime type of that value, then completing based
     on that type.
@@ -335,7 +309,7 @@ async def complete_abstract_value(exe_context, return_type, field_asts, info, re
             field_asts
         )
 
-    return await complete_object_value(exe_context, runtime_type, field_asts, info, result)
+    return complete_object_value(exe_context, runtime_type, field_asts, info, result)
 
 
 def get_default_resolve_type_fn(value, context, info, abstract_type):
@@ -345,7 +319,7 @@ def get_default_resolve_type_fn(value, context, info, abstract_type):
             return type
 
 
-async def complete_object_value(exe_context, return_type, field_asts, info, result):
+def complete_object_value(exe_context, return_type, field_asts, info, result):
     """
     Complete an Object value by evaluating all sub-selections.
     """
@@ -357,8 +331,7 @@ async def complete_object_value(exe_context, return_type, field_asts, info, resu
 
     # Collect sub-fields to execute to complete this value.
     subfield_asts = exe_context.get_sub_fields(return_type, field_asts)
-    r = await execute_fields(exe_context, return_type, result, subfield_asts)
-    return r
+    return execute_fields(exe_context, return_type, result, subfield_asts)
 
 
 async def complete_nonnull_value(exe_context, return_type, field_asts, info, result):
