@@ -107,10 +107,16 @@ async def execute_fields_serially(exe_context, parent_type, source_value, fields
 
 async def execute_fields(exe_context, parent_type, source_value, fields):
     final_results = OrderedDict()
+    all_keys = []
+    all_coros = []
 
     for response_name, field_asts in fields.items():
-        result = await resolve_field(exe_context, parent_type, source_value, field_asts)
+        result = resolve_field(exe_context, parent_type, source_value, field_asts)
+        all_coros.append(result)
+        all_keys.append(response_name)
 
+    values = await gather(*all_coros)
+    for response_name, result in zip(all_keys, values):
         if result is Undefined:
             continue
 
@@ -157,7 +163,7 @@ async def resolve_field(exe_context, parent_type, source, field_asts):
     )
 
     executor = exe_context.executor
-    result = resolve_or_error(resolve_fn_middleware, source, args, context, info, executor)
+    result = resolve_or_error(resolve_fn_middleware, source, args, context, info, executor.execute)
 
     return await complete_value_catching_error(
         exe_context,
@@ -168,9 +174,9 @@ async def resolve_field(exe_context, parent_type, source, field_asts):
     )
 
 
-def resolve_or_error(resolve_fn, source, args, context, info, executor):
+def resolve_or_error(resolve_fn, source, args, context, info, execute):
     try:
-        return executor.execute(resolve_fn, source, args, context, info)
+        return execute(resolve_fn, source, args, context, info)
     except Exception as e:
         logger.exception("An error occurred while resolving field {}.{}".format(
             info.parent_type.name, info.field_name
@@ -192,6 +198,7 @@ async def complete_value_catching_error(exe_context, return_type, field_asts, in
     except Exception as e:
         exe_context.errors.append(e)
         return None
+
 
 async def complete_value(exe_context, return_type, field_asts, info, result):
     """
@@ -258,9 +265,9 @@ async def complete_list_value(exe_context, return_type, field_asts, info, result
     results = []
     for item in result:
         results.append(
-            await complete_value_catching_error(exe_context, item_type, field_asts, info, item)
+            complete_value_catching_error(exe_context, item_type, field_asts, info, item)
         )
-    return results
+    return await gather(*results)
 
 
 def complete_leaf_value(return_type, result):
