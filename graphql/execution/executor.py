@@ -1,7 +1,8 @@
 import collections
 import logging
 import sys
-from asyncio import iscoroutine, gather
+from inspect import isawaitable
+from asyncio import gather
 
 from six import string_types
 
@@ -220,7 +221,7 @@ async def complete_value(exe_context, return_type, field_asts, info, result):
     sub-selections.
     """
     # If field type is NonNull, complete for inner type, and throw field error if result is null.
-    if iscoroutine(result):
+    if isawaitable(result):
         try:
             result = await result
         except Exception as e:
