@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from rx import Observable
 from ..error import GraphQLError
 from ..language import ast
 from ..pyutils.default_ordered_dict import DefaultOrderedDict
@@ -19,7 +20,7 @@ class ExecutionContext(object):
     and the fragments defined in the query document"""
 
     __slots__ = 'schema', 'fragments', 'root_value', 'operation', 'variable_values', 'errors', 'context_value', \
-                'argument_values_cache', 'executor', 'middleware', '_subfields_cache'
+                'argument_values_cache', 'executor', 'middleware', '_subfields_cache', '_all_observables'
 
     def __init__(self, schema, document_ast, root_value, context_value, variable_values, operation_name, executor, middleware):
         """Constructs a ExecutionContext object from the arguments passed
@@ -66,6 +67,7 @@ class ExecutionContext(object):
         self.executor = executor
         self.middleware = middleware
         self._subfields_cache = {}
+        self._all_observables = []
 
     def get_field_resolver(self, field_resolver):
         if not self.middleware:
@@ -81,6 +83,16 @@ class ExecutionContext(object):
                                                                          self.variable_values)
 
         return result
+
+    def has_observables(self):
+        return len(self._all_observables) > 0
+
+    @property
+    def observable(self):
+        return Observable.merge(self._all_observables)
+
+    def add_observable(self, observable):
+        self._all_observables.append(observable)
 
     def get_sub_fields(self, return_type, field_asts):
         k = return_type, tuple(field_asts)
