@@ -9,7 +9,7 @@ from graphql.execution.executors.thread import ThreadExecutor
 
 @pytest.mark.parametrize("executor", [
     SyncExecutor(),
-    # ThreadExecutor(),
+    ThreadExecutor(),
 ])
 def test_batches_correctly(executor):
 
@@ -53,7 +53,7 @@ def test_batches_correctly(executor):
         business_data_loader = BusinessDataLoader()
 
 
-    result = execute(schema, doc_ast, None, context_value=Context(), executor=executor)
+    result = execute(schema, doc_ast, None, context_value=Context(), executor=executor, return_promise=True).get()
     assert not result.errors
     assert result.data == {
         'business1': {
@@ -68,7 +68,7 @@ def test_batches_correctly(executor):
 
 @pytest.mark.parametrize("executor", [
     SyncExecutor(),
-    # ThreadExecutor(),  # Fails on pypy :O
+    ThreadExecutor(),  # Fails on pypy :O
 ])
 def test_batches_multiple_together(executor):
 
@@ -133,7 +133,7 @@ def test_batches_multiple_together(executor):
         location_data_loader = LocationDataLoader()
 
 
-    result = execute(schema, doc_ast, None, context_value=Context(), executor=executor)
+    result = execute(schema, doc_ast, None, context_value=Context(), executor=executor, return_promise=True).get()
     assert not result.errors
     assert result.data == {
         'business1': {

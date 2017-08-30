@@ -30,6 +30,7 @@ tests_requires = [
     'pytest==3.0.2',
     'pytest-django==2.9.1',
     'pytest-cov==2.3.1',
+    'pytest-asyncio==0.6.0',
     'coveralls',
     'gevent==1.1rc1',
     'six>=1.10.0',

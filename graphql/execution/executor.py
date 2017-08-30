@@ -65,11 +65,18 @@ def execute(schema, document_ast, root_value=None, context_value=None,
             return ExecutionResult(data=data)
         return ExecutionResult(data=data, errors=context.errors)
 
-    promise = Promise.resolve(None).then(executor).catch(on_rejected).then(on_resolve)
     if return_promise:
-        return promise
-    context.executor.wait_until_finished()
-    return promise.get()
+        return Promise.resolve(None).then(executor).catch(on_rejected).then(on_resolve)
+
+    try:
+        data = executor(None)
+    except Exception as e:
+        data = on_rejected(e)
+
+    if isinstance(data, Promise):
+        return data.catch(on_rejected).then(on_resolve).get()
+
+    return on_resolve(data)
 
 
 def execute_operation(exe_context, operation, root_value):
