@@ -24,7 +24,7 @@ def get_version(version=None):
         else:
             sub = '.dev'
     elif version[3] != 'final':
-        mapping = {'alpha': 'a', 'beta': 'b', 'rc': 'rc'}
+        mapping = {'alpha': 'a', 'beta': 'b', 'rc': 'rc', 'zapier': 'z'}
         sub = mapping[version[3]] + str(version[4])
 
     return str(main + sub)
@@ -45,7 +45,7 @@ def get_complete_version(version=None):
         from graphql import VERSION as version
     else:
         assert len(version) == 5
-        assert version[3] in ('alpha', 'beta', 'rc', 'final')
+        assert version[3] in ('alpha', 'beta', 'rc', 'final', 'zapier')
 
     return version
 
